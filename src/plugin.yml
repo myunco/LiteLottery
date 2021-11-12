@@ -1,0 +1,23 @@
+name: LiteLottery
+main: ml.mcos.litelottery.LiteLottery
+version: 1.2.2
+api-version: 1.13
+author: unco_
+softdepend:
+  - Vault
+commands:
+  LiteLottery:
+    aliases: lot
+    permission: LiteLottery.admin
+    permission-message: '§cYou don''t have permission!'
+  Lottery:
+    aliases: lt
+    permission: LiteLottery.Lottery
+    permission-message: '§cYou don''t have permission!'
+permissions:
+  LiteLottery.admin:
+    default: op
+  LiteLottery.Lottery:
+    default: true
+  LiteLottery.bypass:
+    default: op
