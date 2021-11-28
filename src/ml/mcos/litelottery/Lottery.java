@@ -266,7 +266,7 @@ public class Lottery {
     }
 
     private void playSound(Player player) {
-        if (plugin.MCVersion < 9) {
+        if (plugin.mcVersion < 9) {
             playSound(player, Sound.valueOf("ORB_PICKUP"));
         } else {
             playSound(player, Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
@@ -274,7 +274,7 @@ public class Lottery {
     }
 
     private void playSound(Player player, String sound) {
-        if (plugin.MCVersion < 9) {
+        if (plugin.mcVersion < 9) {
             switch (sound) {
                 case "ENTITY_EXPERIENCE_ORB_PICKUP":
                     sound = "ORB_PICKUP";
@@ -657,7 +657,7 @@ public class Lottery {
     }
 
     private void sendTitleAll(String title, String subtitle, int stay) {
-        if (plugin.MCVersion > 10) {
+        if (plugin.mcVersion > 10) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
                 player.sendTitle(title, subtitle, 10, stay * 20, 10);
             }

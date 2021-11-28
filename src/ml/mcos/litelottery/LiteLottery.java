@@ -9,14 +9,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 public class LiteLottery extends JavaPlugin {
-    int MCVersion = Integer.parseInt(getServer().getBukkitVersion().split("\\.")[1]);
+    int mcVersion = getMinecraftVersion();
     ConsoleCommandSender consoleSender = getServer().getConsoleSender();
     BukkitScheduler bukkitScheduler = getServer().getScheduler();
     int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
@@ -25,6 +24,7 @@ public class LiteLottery extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        getLogger().info("Minecraft version = 1." + mcVersion);
         if (init()) {
             consoleSender.sendMessage("[LiteLottery] using economy system: §3" + economy.getName());
             bukkitScheduler.runTaskTimerAsynchronously(this, () -> {
@@ -68,8 +68,13 @@ public class LiteLottery extends JavaPlugin {
         return false;
     }
 
+    public int getMinecraftVersion() {
+        return Integer.parseInt(getServer().getBukkitVersion().replace('-', '.').split("\\.")[1]);
+    }
+
+    @SuppressWarnings("NullableProblems")
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equals("LiteLottery")) {
             commandLiteLottery(sender, args);
         } else {
@@ -142,8 +147,9 @@ public class LiteLottery extends JavaPlugin {
         sender.sendMessage("§7§l[§c§lLottery§7§l] " + s);
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (command.getName().equals("Lottery") && args.length > 1 && sender instanceof Player) {
             if (args.length < 7 && !args[1].equalsIgnoreCase("random")) {
                 ArrayList<String> list = new ArrayList<>(lottery.numList);

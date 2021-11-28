@@ -1,5 +1,13 @@
 package ml.mcos.litelottery;
 
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
 public class Config {
     public static int lotteryHour;
     public static int lotteryMinute;
@@ -26,8 +34,8 @@ public class Config {
 
     public static void init(LiteLottery plugin) {
         plugin.saveDefaultConfig();
-        plugin.reloadConfig();
-        String drawTime = plugin.getConfig().getString("lotteryTime");
+        YamlConfiguration config = loadConfiguration(new File(plugin.getDataFolder(), "config.yml"), plugin);
+        String drawTime = config.getString("lotteryTime");
         if (drawTime != null && drawTime.matches("[0-9]+:[0-9]+")) {
             String[] time = drawTime.split(":");
             lotteryHour = Integer.parseInt(time[0]);
@@ -48,64 +56,84 @@ public class Config {
             lotteryMinute = 30;
             plugin.getLogger().info("已将开奖时间设置为: 20:30");
         }
-        notice = plugin.getConfig().getBoolean("notice", true);
-        maxNumber = plugin.getConfig().getInt("maxNumber");
+        notice = config.getBoolean("notice", true);
+        maxNumber = config.getInt("maxNumber");
         if (maxNumber < 5) {
             maxNumber = 5;
         } else if (maxNumber > 99) {
             maxNumber = 99;
         }
-        initialPrizePool = plugin.getConfig().getDouble("initialPrizePool");
+        initialPrizePool = config.getDouble("initialPrizePool");
         if (initialPrizePool < 0) {
             initialPrizePool = 0;
         }
-        maxPrizePool = plugin.getConfig().getDouble("maxPrizePool");
+        maxPrizePool = config.getDouble("maxPrizePool");
         if (maxPrizePool < initialPrizePool) {
             maxPrizePool = initialPrizePool;
         }
-        moneyPerBets = plugin.getConfig().getDouble("moneyPerBets");
+        moneyPerBets = config.getDouble("moneyPerBets");
         if (moneyPerBets < 0) {
             moneyPerBets = 0;
         }
-        maxNums = plugin.getConfig().getInt("maxNums");
+        maxNums = config.getInt("maxNums");
         if (maxNums < 0) {
             maxNums = 0;
         }
-        maxBets = plugin.getConfig().getInt("maxBets");
+        maxBets = config.getInt("maxBets");
         if (maxBets < 0) {
             maxBets = 0;
         }
-        fifthPrize = plugin.getConfig().getDouble("fifthPrize");
-        fifthPrizeMax = plugin.getConfig().getDouble("fifthPrizeMax");
+        fifthPrize = config.getDouble("fifthPrize");
+        fifthPrizeMax = config.getDouble("fifthPrizeMax");
         if (fifthPrizeMax < fifthPrize) {
             fifthPrizeMax = fifthPrize;
         }
-        fourthPrize = plugin.getConfig().getDouble("fourthPrize");
-        fourthPrizeMax = plugin.getConfig().getDouble("fourthPrizeMax");
+        fourthPrize = config.getDouble("fourthPrize");
+        fourthPrizeMax = config.getDouble("fourthPrizeMax");
         if (fourthPrizeMax < fourthPrize) {
             fourthPrizeMax = fourthPrize;
         }
-        thirdPrize = plugin.getConfig().getDouble("thirdPrize");
-        thirdPrizeMax = plugin.getConfig().getDouble("thirdPrizeMax");
+        thirdPrize = config.getDouble("thirdPrize");
+        thirdPrizeMax = config.getDouble("thirdPrizeMax");
         if (thirdPrizeMax < thirdPrize) {
             thirdPrizeMax = thirdPrize;
         }
-        secondPrize = plugin.getConfig().getDouble("secondPrize");
-        firstPrize = plugin.getConfig().getDouble("firstPrize");
-        specialPrize = plugin.getConfig().getDouble("specialPrize");
-        specialPrizeMax = plugin.getConfig().getDouble("specialPrizeMax");
+        secondPrize = config.getDouble("secondPrize");
+        firstPrize = config.getDouble("firstPrize");
+        specialPrize = config.getDouble("specialPrize");
+        specialPrizeMax = config.getDouble("specialPrizeMax");
         if (specialPrizeMax < specialPrize) {
             specialPrizeMax = specialPrize;
         }
-        ignorePrizePool = plugin.getConfig().getBoolean("ignorePrizePool", true);
-        randomInterval = plugin.getConfig().getInt("randomInterval");
+        ignorePrizePool = config.getBoolean("ignorePrizePool", true);
+        randomInterval = config.getInt("randomInterval");
         if (randomInterval < 0) {
             randomInterval = 0;
         }
-        randomMax = plugin.getConfig().getInt("randomMax");
+        randomMax = config.getInt("randomMax");
         if (randomMax < 0) {
             randomMax = 0;
         }
+    }
+
+    public static YamlConfiguration loadConfiguration(File file, LiteLottery plugin) {
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder();
+            String line;
+            try {
+                while((line = reader.readLine()) != null) {
+                    builder.append(line).append('\n');
+                }
+            } finally {
+                reader.close();
+            }
+            config.loadFromString(builder.toString());
+        } catch (Exception e) {
+            plugin.getLogger().severe("错误, 无法加载配置文件: " + file.getAbsolutePath());
+        }
+        return config;
     }
 
 }
