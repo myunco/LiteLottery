@@ -1,5 +1,6 @@
-package ml.mcos.litelottery;
+package ml.mcos.litelottery.config;
 
+import ml.mcos.litelottery.LiteLottery;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.BufferedReader;
@@ -131,6 +132,7 @@ public class Config {
             }
             config.loadFromString(builder.toString());
         } catch (Exception e) {
+            plugin.getLogger().info(e.getMessage());
             plugin.getLogger().severe("错误, 无法加载配置文件: " + file.getAbsolutePath());
         }
         return config;

@@ -1,5 +1,7 @@
 package ml.mcos.litelottery;
 
+import ml.mcos.litelottery.config.Config;
+import ml.mcos.litelottery.config.Messages;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
@@ -24,7 +26,7 @@ import java.util.Set;
 public class Lottery {
     static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
     static final DecimalFormat decimalFormat = new DecimalFormat(",##0.00");
-    static final String MESSAGE_PREFIX = "§7§l[§c§lLottery§7§l] ";
+    static final String MESSAGE_PREFIX = Messages.messagePrefix;
     ConsoleCommandSender consoleSender;
     BukkitScheduler bukkitScheduler;
     YamlConfiguration lotteryInfo;
@@ -38,6 +40,7 @@ public class Lottery {
     List<String> numList = new ArrayList<>();
     String numbers;
     boolean notice;
+    String introduction;
 
     public Lottery(LiteLottery plugin, Economy economy) {
         this.plugin = plugin;
@@ -73,7 +76,7 @@ public class Lottery {
         if (!file.exists()) {
             try {
                 if (!file.createNewFile() && !file.createNewFile()) {
-                    consoleSender.sendMessage("§c无法创建新文件, 初始化失败!");
+                    consoleSender.sendMessage(MESSAGE_PREFIX + Messages.cannotCreateNewFile);
                     isOK = false;
                     return;
                 }
@@ -84,7 +87,7 @@ public class Lottery {
         }
         lotteryInfo = YamlConfiguration.loadConfiguration(file);
         if (!lotteryInfo.contains("prizePool")) {
-            addPrizePool(Config.initialPrizePool); //新一期奖池余额 = 上期剩余奖池+初始奖池
+            addPrizePool(Config.initialPrizePool); //新一期奖池余额 = 上期剩余奖池 + 初始奖池
             save();
         } else {
             prizePool = lotteryInfo.getDouble("prizePool");
@@ -92,6 +95,11 @@ public class Lottery {
         isRunLottery = lotteryInfo.getBoolean("isRunLottery");
         runLotteryFinish = isRunLottery;
         notice = false;
+        introduction = String.format(Messages.introduction,
+                formatDecimal(Config.moneyPerBets),  getLotteryTime(),
+                formatDecimal(Config.fifthPrize), formatDecimal(Config.fourthPrize),
+                formatDecimal(Config.thirdPrize), formatDecimal(Config.secondPrize),
+                formatDecimal(Config.firstPrize), formatDecimal(Config.specialPrize));
         isOK = true;
     }
 
@@ -130,21 +138,16 @@ public class Lottery {
 
     private void setValue(String path, Object value) {
         lotteryInfo.set(path, value);
-        //save();
     }
 
     public void showLotteryInfo(Player player) {
-        sendMessage(player, "§7玩法介绍: 每天开奖前从可选号码中任选1-5个号码为一组进行投注, 每注价格: $" + formatDecimal(Config.moneyPerBets) +
-                "\n可以投注多组号码, 但每一组号码中的号码不能重复。" +
-                "\n开奖规则: 每天" + getLotteryTime() + "系统随机生成5个中奖号码。所选号码与中奖号码进行比较, 包含全部中奖号码即为一等奖, 包含4个中奖号码即为二等奖, 包含3个中奖号码即为三等奖, 包含2个中奖号码即为四等奖, 包含1个中奖号码即为五等奖。(不要求顺序一致)" +
-                "\n五等奖每注奖金: $" + formatDecimal(Config.fifthPrize) + ", 四等奖每注奖金: $" + formatDecimal(Config.fourthPrize) + ", 三等奖每注奖金: $" + formatDecimal(Config.thirdPrize) +
-                "\n二等奖每注奖金: (奖池资金 * 0.25 + $" + formatDecimal(Config.secondPrize) + ") / 中奖注数" +
-                "\n一等奖每注奖金: (奖池资金 * 0.75 + $" + formatDecimal(Config.firstPrize) + ") / 中奖注数" +
-                "\n除此之外, 还设有特等奖, 投注号码与中奖号码完全一致即为特等奖。\n特等奖每注奖金: $" + formatDecimal(Config.specialPrize)
-        );
-        sendMessage(player, "§3投注方法: /lt <投注数量> <所选号码>\n例如: /lt 2 07 12 02 10 05 表示购买2注(07 12 02 10 05)");
-        sendMessage(player, "§6可选号码: §2" + numbers);
-        sendMessage(player, "§a当前奖池资金: §e$" + formatDecimal(prizePool));
+        sendMessage(player, introduction);
+        //sendMessage(player, "§3投注方法: /lt <投注数量> <所选号码>\n例如: /lt 2 07 12 02 10 05 表示购买2注(07 12 02 10 05)");
+        sendMessage(player, Messages.placeBetMethod);
+        //sendMessage(player, "§6可选号码: §2" + numbers);
+        sendMessage(player, Messages.optionalNumbers + numbers);
+        //sendMessage(player, "§a当前奖池资金: §e$" + formatDecimal(prizePool));
+        sendMessage(player, Messages.currentPrizePool + formatDecimal(prizePool));
         showBets(player);
     }
 
@@ -157,7 +160,8 @@ public class Lottery {
         if (bets.isEmpty()) {
             return;
         }
-        StringBuilder builder = new StringBuilder("§d本期投注 §3(您): \n");
+        //StringBuilder builder = new StringBuilder("§d本期投注 §3(您): \n");
+        StringBuilder builder = new StringBuilder(Messages.s1 + "\n");
         int amount = 0;
         for (String bet : bets) {
             int i = cs.getInt(bet + ".amount");
@@ -165,7 +169,8 @@ public class Lottery {
             builder.append("§7 >> §b").append(bet).append(" §a共§6").append(i).append("§a注 ").append(cs.getString(bet + ".state")).append('\n');
         }
         sendMessage(player, builder.substring(0, builder.length() - 1));
-        sendMessage(player, "§3本期投注统计: §a" + bets.size() + "§3组号码 §6" + amount + "§3注");
+        //sendMessage(player, "§3本期投注统计: §a" + bets.size() + "§3组号码 §6" + amount + "§3注");
+        sendMessage(player, Messages.getMessage(Messages.s2, String.valueOf(bets.size()), String.valueOf(amount)));
     }
 
     private String getLotteryTime() {
@@ -182,28 +187,34 @@ public class Lottery {
 
     public void placeBet(Player player, String[] args) {
         if (isRunLottery) {
-            sendMessage(player, "§c今天已经开奖, 明天再来投注吧。");
+            //sendMessage(player, "§c今天已经开奖, 明天再来投注吧。");
+            sendMessage(player, Messages.s3);
         } else if (args.length < 2) {
-            sendMessage(player, "§6用法: §7/lt <投注数量> <所选号码>");
+            //sendMessage(player, "§6用法: §7/lt <投注数量> <所选号码>");
+            sendMessage(player, Messages.s4);
         } else if (args.length > 6) {
-            sendMessage(player, "§6你选的号码太多了, 最多只能选5个号码。");
+            //sendMessage(player, "§6你选的号码太多了, 最多只能选5个号码。");
+            sendMessage(player, Messages.s5);
         } else {
             int amount = parseInt(args[0]);
             if (amount < 1) {
-                sendMessage(player, "§6无效的投注数量: §7" + args[0]);
+                //sendMessage(player, "§6无效的投注数量: §7" + args[0]);
+                sendMessage(player, Messages.s6 + args[0]);
                 return;
             }
             if (args.length == 2 && args[1].equals("random")) {
                 String playerName = player.getName();
                 if (getRandomCount(playerName) >= Config.randomMax) {
-                    sendMessage(player, "§c你今天使用随机选号的次数已达上限。");
+                    //sendMessage(player, "§c你今天使用随机选号的次数已达上限。");
+                    sendMessage(player, Messages.s7);
                 } else if (player.hasPermission("LiteLottery.bypass") || checkRandomInterval(playerName)) {
                     if (buyLottery(player, String.join(" ", randomNumber()), amount)) {
                         addRandomCount(playerName);
                         setRandomTime(playerName, System.currentTimeMillis());
                     }
                 } else {
-                    sendMessage(player, "§b你使用的太快了，喝口茶休息一会再来吧。");
+                    //sendMessage(player, "§b你使用的太快了，喝口茶休息一会再来吧。");
+                    sendMessage(player, Messages.s8);
                 }
                 return;
             }
@@ -219,10 +230,12 @@ public class Lottery {
         ArrayList<String> temp = new ArrayList<>();
         for (String num : nums) {
             if (temp.contains(num)) {
-                sendMessage(player, "§6错误, 选择的号码中含有重复号码: §7" + num);
+                //sendMessage(player, "§6错误, 选择的号码中含有重复号码: §7" + num);
+                sendMessage(player, Messages.s9 + num);
                 return false;
             } else if (!numList.contains(num)) {
-                sendMessage(player, "§6错误, 选择的号码不在可选号码内: §7" + num);
+                //sendMessage(player, "§6错误, 选择的号码不在可选号码内: §7" + num);
+                sendMessage(player, Messages.s10 + num);
                 return false;
             }
             temp.add(num);
@@ -243,23 +256,29 @@ public class Lottery {
 
     private boolean buyLottery(Player player, String nums, int amount) {
         if (Config.maxNums != 0 && getBetNums(player.getName()) == Config.maxNums && getBetAmount(player.getName(), nums) == 0) {
-            player.sendMessage("§c你本期投注的号码数量已达上限。");
+            //player.sendMessage("§c你本期投注的号码数量已达上限。");
+            sendMessage(player, Messages.s11);
         } else if (Config.maxBets != 0 && getBetsAmount(player.getName()) + amount > Config.maxBets) {
-            player.sendMessage("§c错误, 投注数量超过了本期投注上限。");
+            //player.sendMessage("§c错误, 投注数量超过了本期投注上限。");
+            sendMessage(player, Messages.s12);
         } else {
             double money = amount * Config.moneyPerBets;
             if (economy.has(player, money)) {
                 economy.withdrawPlayer(player, money);
                 addPrizePool(money);
                 addBetAmount(player.getName(), nums, amount);
-                setBetState(player.getName(), nums, "§7(等待开奖)");
+                //setBetState(player.getName(), nums, "§7(等待开奖)");
+                setBetState(player.getName(), nums, Messages.s13);
                 save();
-                sendMessage(player, "§a§l购买§6" + amount + "§a§l注§3(" + nums + ") §a§l共花费: §b$" + formatDecimal(money));
+                //sendMessage(player, "§a§l购买§6" + amount + "§a§l注§3(" + nums + ") §a§l共花费: §b$" + formatDecimal(money));
+                sendMessage(player, Messages.getMessage(Messages.s14, String.valueOf(amount), nums) + formatDecimal(money));
                 playSound(player);
                 return true;
             } else {
-                player.sendMessage("§c错误: §7你没有足够的金钱。");
-                player.sendMessage("§7共计需要: $" + formatDecimal(money) + " (每注价格: $" + formatDecimal(Config.moneyPerBets) + ")");
+                //player.sendMessage("§c错误: §7你没有足够的金钱。");
+                sendMessage(player, Messages.s15);
+                //player.sendMessage("§7共计需要: $" + formatDecimal(money) + " (每注价格: $" + formatDecimal(Config.moneyPerBets) + ")");
+                sendMessage(player, Messages.getMessage(Messages.s16, formatDecimal(money), formatDecimal(Config.moneyPerBets)));
             }
         }
         return false;
@@ -387,13 +406,13 @@ public class Lottery {
     }
 
     /**
-     * 将字符串解析为10进制非0正整数
-     * @param s 十进制整数字符串
+     * 将字符串解析为10进制整数
+     * @param num 十进制整数字符串
      * @return 如果结果小于1 返回-1
      */
-    private static int parseInt(String s) {
+    private static int parseInt(String num) {
         try {
-            int i = Integer.parseInt(s);
+            int i = Integer.parseInt(num);
             return i < 1 ? -1 : i;
         } catch (NumberFormatException e) {
             return -1;
@@ -410,7 +429,8 @@ public class Lottery {
                 minute = minute % 60;
             }
             if (hour == Config.lotteryHour && minute == Config.lotteryMinute) {
-                broadcastMessage("§b开奖将在十分钟后进行, 不要走开, 也许你就是本期的特等奖得主!");
+                //broadcastMessage("§b开奖将在十分钟后进行, 不要走开, 也许你就是本期的特等奖得主!");
+                broadcastMessage(Messages.s17);
                 notice = true;
             }
         }
@@ -432,8 +452,10 @@ public class Lottery {
     private void runLottery() {
         plugin.bukkitScheduler.runTaskAsynchronously(plugin, () -> {
             ArrayList<String> prizeNum = new ArrayList<>();
-            broadcastMessage("§6§l正在开奖§6···");
-            sendTitleAll("§6正在开奖···", "§k00 00 00 00 00", 5);
+            //broadcastMessage("§6§l正在开奖§6···");
+            broadcastMessage(Messages.s18);
+            //sendTitleAll("§6正在开奖···", "§k00 00 00 00 00", 5);
+            sendTitleAll(Messages.s19, "§k00 00 00 00 00", 5);
             playSoundAll("ENTITY_EXPERIENCE_ORB_PICKUP");
             try {
                 Thread.sleep(3000);
@@ -443,12 +465,14 @@ public class Lottery {
             StringBuilder builder = new StringBuilder();
             for (int i = 1; i < 5; i++) {
                 randomNumber(prizeNum);
-                broadcastMessage("§b第" + i + "个中奖号码是: §c" + prizeNum.get(i - 1));
+                //broadcastMessage("§b第" + i + "个中奖号码是: §c" + prizeNum.get(i - 1));
+                broadcastMessage(Messages.getMessage(Messages.s20, String.valueOf(i)) + prizeNum.get(i - 1));
                 if (i != 1) {
                     builder.append(' ');
                 }
                 builder.append(prizeNum.get(i - 1));
-                sendTitleAll("§6正在开奖···", "§c" + builder + " §r§k" + repeat00(5 - i), 5);
+                //sendTitleAll("§6正在开奖···", "§c" + builder + " §r§k" + repeat00(5 - i), 5);
+                sendTitleAll(Messages.s19, "§c" + builder + " §r§k" + repeat00(5 - i), 5);
                 playSoundAll("ENTITY_EXPERIENCE_ORB_PICKUP");
                 try {
                     Thread.sleep(3000);
@@ -457,10 +481,13 @@ public class Lottery {
                 }
             }
             randomNumber(prizeNum);
-            broadcastMessage("§b第5个中奖号码是: §c" + prizeNum.get(4));
+            //broadcastMessage("§b第5个中奖号码是: §c" + prizeNum.get(4));
+            broadcastMessage(Messages.getMessage(Messages.s20, "5") + prizeNum.get(4));
             builder.append(' ').append(prizeNum.get(4));
-            sendTitleAll("§6本期中奖号码", "§a" + builder, 7);
-            broadcastMessage("§6本期中奖号码: §a" + builder);
+            //sendTitleAll("§6本期中奖号码", "§a" + builder, 7);
+            sendTitleAll(Messages.s21, "§a" + builder, 7);
+            //broadcastMessage("§6本期中奖号码: §a" + builder);
+            broadcastMessage(Messages.s22 + builder);
             setValue("prizeNumber", builder.toString());
             HashMap<String, Integer> firstPrize = new HashMap<>();
             HashMap<String, Integer> secondPrize = new HashMap<>();
@@ -472,21 +499,25 @@ public class Lottery {
                 ArrayList<String> bets = getBets(player);
                 for (String bet : bets) {
                     if (bet.equals(builder.toString())) {
-                        setBetState(player, bet, "§d§l(特等奖)");
+                        //setBetState(player, bet, "§d§l(特等奖)");
+                        setBetState(player, bet, Messages.s23);
                         int amount = getBetAmount(player, bet);
-                        String msg = "§4§l难以置信！ §a" + player + "§c§l抽中§d§l特等奖§6§l" + amount + "§c§l注！";
+                        //String msg = "§4§l难以置信！ §a" + player + "§c§l抽中§d§l特等奖§6§l" + amount + "§c§l注！";
+                        String msg = Messages.getMessage(Messages.s24, player, String.valueOf(amount));
                         broadcastMessage(msg);
                         broadcastMessage(msg);
                         broadcastMessage(msg);
                         playSoundAll("ENTITY_ENDER_DRAGON_DEATH");
                         Player p = plugin.getServer().getPlayerExact(player);
                         if (p == null) {
-                            broadcastMessage("§6很遗憾··· 由于特等奖得主当前并未在线, 只能获得20%的奖金。");
+                            //broadcastMessage("§6很遗憾··· 由于特等奖得主当前并未在线, 只能获得20%的奖金。");
+                            broadcastMessage(Messages.s25);
                             economy.depositPlayer(getOfflinePlayer(player), Math.min(Config.specialPrize * amount * 0.2, Config.specialPrizeMax));
                         } else {
                             double money = Math.min(Config.specialPrize * amount, Config.specialPrizeMax);
                             economy.depositPlayer(p, money);
-                            sendMessage(p, "§6你抽中§d§l特等奖§c, 获得了: §b$" + formatDecimal(money));
+                            //sendMessage(p, "§6你抽中§d§l特等奖§c, 获得了: §b$" + formatDecimal(money));
+                            sendMessage(p, Messages.s26 + formatDecimal(money));
                         }
                     } else {
                         String[] nums = bet.split(" ");
@@ -499,23 +530,29 @@ public class Lottery {
                         if (count != 0) {
                             int amount = getBetAmount(player, bet);
                             if (count == 5) {
-                                setBetState(player, bet, "§c(一等奖)");
+                                //setBetState(player, bet, "§c(一等奖)");
+                                setBetState(player, bet, Messages.s27);
                                 firstPrize.merge(player, amount, Integer::sum);
                             } else if (count == 4) {
-                                setBetState(player, bet, "§b(二等奖)");
+                                //setBetState(player, bet, "§b(二等奖)");
+                                setBetState(player, bet, Messages.s28);
                                 secondPrize.merge(player, amount, Integer::sum);
                             } else if (count == 3) {
-                                setBetState(player, bet, "§a(三等奖)");
+                                //setBetState(player, bet, "§a(三等奖)");
+                                setBetState(player, bet, Messages.s29);
                                 thirdPrize.merge(player, amount, Integer::sum);
                             } else if (count == 2) {
-                                setBetState(player, bet, "§3(四等奖)");
+                                //setBetState(player, bet, "§3(四等奖)");
+                                setBetState(player, bet, Messages.s30);
                                 fifthPrize.merge(player, amount, Integer::sum);
                             } else if (count == 1) {
-                                setBetState(player, bet, "§9(五等奖)");
+                                //setBetState(player, bet, "§9(五等奖)");
+                                setBetState(player, bet, Messages.s31);
                                 fourthPrize.merge(player, amount, Integer::sum);
                             }
                         } else {
-                            setBetState(player, bet, "§7(未中奖)");
+                            //setBetState(player, bet, "§7(未中奖)");
+                            setBetState(player, bet, Messages.s32);
                         }
                     }
                 }
@@ -526,34 +563,45 @@ public class Lottery {
             String fifthPrizeResult;
             String fourthPrizeResult;
             if (fourthPrize.isEmpty()) {
-                fourthPrizeResult = "§9五等奖: §7无";
+                //fourthPrizeResult = "§9五等奖: §7无";
+                fourthPrizeResult = Messages.s33;
             } else {
-                fourthPrizeResult = "§9五等奖: " + getNamesAndGiveMoney(fourthPrize, Config.fifthPrize, Config.fifthPrizeMax, "§9五等奖");
+                //fourthPrizeResult = "§9五等奖: " + getNamesAndGiveMoney(fourthPrize, Config.fifthPrize, Config.fifthPrizeMax, "§9五等奖");
+                fourthPrizeResult = Messages.s34 + getNamesAndGiveMoney(fourthPrize, Config.fifthPrize, Config.fifthPrizeMax, Messages.s43);
             }
             if (fifthPrize.isEmpty()) {
-                fifthPrizeResult = "§3四等奖: §7无";
+                //fifthPrizeResult = "§3四等奖: §7无";
+                fifthPrizeResult = Messages.s35;
             } else {
-                fifthPrizeResult = "§3四等奖: " + getNamesAndGiveMoney(fifthPrize, Config.fourthPrize, Config.fourthPrizeMax, "§3四等奖");
+                //fifthPrizeResult = "§3四等奖: " + getNamesAndGiveMoney(fifthPrize, Config.fourthPrize, Config.fourthPrizeMax, "§3四等奖");
+                fifthPrizeResult = Messages.s36 + getNamesAndGiveMoney(fifthPrize, Config.fourthPrize, Config.fourthPrizeMax, Messages.s44);
             }
             if (thirdPrize.isEmpty()) {
-                thirdPrizeResult = "§a三等奖: §7无";
+                //thirdPrizeResult = "§a三等奖: §7无";
+                thirdPrizeResult = Messages.s37;
             } else {
-                thirdPrizeResult = "§a三等奖: " + getNamesAndGiveMoney(thirdPrize, Config.thirdPrize, Config.thirdPrizeMax, "§d三等奖");
+                //thirdPrizeResult = "§a三等奖: " + getNamesAndGiveMoney(thirdPrize, Config.thirdPrize, Config.thirdPrizeMax, "§d三等奖");
+                thirdPrizeResult = Messages.s38 + getNamesAndGiveMoney(thirdPrize, Config.thirdPrize, Config.thirdPrizeMax, Messages.s45);
             }
             double prizePoolTemp = prizePool;
             if (secondPrize.isEmpty()) {
-                secondPrizeResult = "§b二等奖: §7无";
+                //secondPrizeResult = "§b二等奖: §7无";
+                secondPrizeResult = Messages.s39;
             } else {
-                secondPrizeResult = "§b二等奖: " + getNamesAndBalance(secondPrize, prizePoolTemp * 0.25, Config.secondPrize, "§a你抽中§6%d§a注§b二等奖§a, 获得了: §b$");
+                //secondPrizeResult = "§b二等奖: " + getNamesAndBalance(secondPrize, prizePoolTemp * 0.25, Config.secondPrize, "§a你抽中§6%d§a注§b二等奖§a, 获得了: §b$");
+                secondPrizeResult = Messages.s40 + getNamesAndBalance(secondPrize, prizePoolTemp * 0.25, Config.secondPrize, Messages.s46);
                 subPrizePool(prizePoolTemp * 0.25);
             }
             if (firstPrize.isEmpty()) {
-                firstPrizeResult = "§c一等奖: §7无";
+                //firstPrizeResult = "§c一等奖: §7无";
+                firstPrizeResult = Messages.s41;
             } else {
-                firstPrizeResult = "§c一等奖: " + getNamesAndBalance(firstPrize, prizePoolTemp * 0.75, Config.firstPrize, "§c你抽中§6%d§c注§c§l一等奖§c, 获得了: §b$");
+                //firstPrizeResult = "§c一等奖: " + getNamesAndBalance(firstPrize, prizePoolTemp * 0.75, Config.firstPrize, "§c你抽中§6%d§c注§c§l一等奖§c, 获得了: §b$");
+                firstPrizeResult = Messages.s42 + getNamesAndBalance(firstPrize, prizePoolTemp * 0.75, Config.firstPrize, Messages.s47);
                 subPrizePool(prizePoolTemp * 0.75);
             }
-            broadcastMessage("§6§l开奖结果:");
+            //broadcastMessage("§6§l开奖结果:");
+            broadcastMessage(Messages.s48);
             broadcastMessage(firstPrizeResult);
             broadcastMessage(secondPrizeResult);
             broadcastMessage(thirdPrizeResult);
@@ -598,7 +646,8 @@ public class Lottery {
                 economy.depositPlayer(player, money);
                 if (p != null) {
                     playSound(p, "ENTITY_PLAYER_LEVELUP");
-                    sendMessage(p, "§a你抽中§6" + entry.getValue() + "§a注" + prize + "§a, 获得了: §b$" + formatDecimal(money));
+                    //sendMessage(p, "§a你抽中§6" + entry.getValue() + "§a注" + prize + "§a, 获得了: §b$" + formatDecimal(money));
+                    sendMessage(p, Messages.getMessage(Messages.s49, String.valueOf(entry.getValue()), prize) + formatDecimal(money));
                 }
             } else if (prizePool != 0) { //奖池余额小于奖金且奖池余额不为0
                 money = prizePool;
@@ -606,11 +655,13 @@ public class Lottery {
                 economy.depositPlayer(player, money);
                 if (p != null) {
                     playSound(p, "ENTITY_PLAYER_LEVELUP");
-                    sendMessage(p, "§a你抽中§6" + entry.getValue() + "§a注" + prize + "§a, 但由于奖池资金不足, 只获得了: §b$" + formatDecimal(money));
+                    //sendMessage(p, "§a你抽中§6" + entry.getValue() + "§a注" + prize + "§a, 但由于奖池资金不足, 只获得了: §b$" + formatDecimal(money));
+                    sendMessage(p, Messages.getMessage(Messages.s50, String.valueOf(entry.getValue()), prize) + formatDecimal(money));
                 }
             } else {
                 if (p != null) {
-                    sendMessage(p, "§c很遗憾! 虽然你抽中§6" + entry.getValue() + "§c注" + prize + "§c, 但由于奖池资金已经为0, 未能获得奖金。");
+                    //sendMessage(p, "§c很遗憾! 虽然你抽中§6" + entry.getValue() + "§c注" + prize + "§c, 但由于奖池资金已经为0, 未能获得奖金。");
+                    sendMessage(p, Messages.getMessage(Messages.s51, String.valueOf(entry.getValue()), prize));
                 }
             }
         }
@@ -671,6 +722,14 @@ public class Lottery {
         file = new File(file.getParent(), getFileName());
         init();
         return true;
+    }
+
+    public void forceFalse() {
+        if (isRunLottery) {
+            isRunLottery = false;
+            setValue("isRunLottery", false);
+            save();
+        }
     }
 
 }

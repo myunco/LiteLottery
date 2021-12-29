@@ -1,5 +1,7 @@
 package ml.mcos.litelottery;
 
+import ml.mcos.litelottery.config.Config;
+import ml.mcos.litelottery.config.Messages;
 import ml.mcos.litelottery.metrics.Metrics;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.Command;
@@ -61,6 +63,7 @@ public class LiteLottery extends JavaPlugin {
 
     private boolean init() {
         Config.init(this);
+        Messages.init(this);
         if (setupEconomy()) {
             lottery = new Lottery(this, economy);
             return lottery.isOK;
@@ -92,7 +95,7 @@ public class LiteLottery extends JavaPlugin {
                 lottery.placeBet(player, args);
             }
         } else {
-            sendMessage(sender, "§c本命令只能玩家使用。");
+            sendMessage(sender, Messages.playerOnly);
         }
     }
 
@@ -104,7 +107,7 @@ public class LiteLottery extends JavaPlugin {
         }
         switch (args[0].toLowerCase()) {
             case "version":
-                sendMessage(sender, "§a当前版本: §b" + getDescription().getVersion());
+                sendMessage(sender, Messages.version + getDescription().getVersion());
                 break;
             case "reload":
                 Config.init(this);
@@ -113,18 +116,18 @@ public class LiteLottery extends JavaPlugin {
                     lottery.prizePool = 0.0;
                     lottery.init();
                 }
-                sendMessage(sender, "§a配置文件重载完成。");
+                sendMessage(sender, Messages.reload);
                 break;
             case "run":
                 if (lottery.isRunLottery) {
-                    sendMessage(sender, "§c今天已经开过奖了!");
+                    sendMessage(sender, Messages.alreadyLottery);
                 } else {
                     lottery.tryRunLottery();
                 }
                 break;
             case "force":
                 if (lottery.isRunLottery && !lottery.runLotteryFinish) {
-                    sendMessage(sender, "§c当前正在开奖, 你必须等待开奖结束才能再次开奖!");
+                    sendMessage(sender, Messages.running1);
                 } else {
                     lottery.isRunLottery = false;
                     lottery.tryRunLottery();
@@ -132,19 +135,19 @@ public class LiteLottery extends JavaPlugin {
                 break;
             case "forcefalse":
                 if (lottery.isRunLottery && !lottery.runLotteryFinish) {
-                    sendMessage(sender, "§c当前正在开奖, 你必须等待开奖结束才能设置开奖状态!");
+                    sendMessage(sender, Messages.running2);
                 } else {
-                    lottery.isRunLottery = false;
-                    sendMessage(sender, "§a已将开奖状态设为§b未开奖§a。");
+                    lottery.forceFalse();
+                    sendMessage(sender, Messages.forceFalse);
                 }
                 break;
             default:
-                sendMessage(sender, "§6错误: 未知的命令参数");
+                sendMessage(sender, Messages.unknownArgs);
         }
     }
 
     private void sendMessage(CommandSender sender, String s) {
-        sender.sendMessage("§7§l[§c§lLottery§7§l] " + s);
+        sender.sendMessage(Messages.messagePrefix + s);
     }
 
     @SuppressWarnings("NullableProblems")
