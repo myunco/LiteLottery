@@ -211,6 +211,7 @@ public class Lottery {
                     if (buyLottery(player, String.join(" ", randomNumber()), amount)) {
                         addRandomCount(playerName);
                         setRandomTime(playerName, System.currentTimeMillis());
+                        save();
                     }
                 } else {
                     //sendMessage(player, "§b你使用的太快了，喝口茶休息一会再来吧。");
