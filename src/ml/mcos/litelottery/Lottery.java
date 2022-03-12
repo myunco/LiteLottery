@@ -5,11 +5,9 @@ import ml.mcos.litelottery.config.Messages;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,29 +22,24 @@ import java.util.Random;
 import java.util.Set;
 
 public class Lottery {
-    static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    static final DecimalFormat decimalFormat = new DecimalFormat(",##0.00");
-    static final String MESSAGE_PREFIX = Messages.messagePrefix;
-    ConsoleCommandSender consoleSender;
-    BukkitScheduler bukkitScheduler;
-    YamlConfiguration lotteryInfo;
-    LiteLottery plugin;
-    Economy economy;
-    File file;
-    boolean isOK;
-    double prizePool;
-    boolean isRunLottery;
-    boolean runLotteryFinish;
-    List<String> numList = new ArrayList<>();
-    String numbers;
-    boolean notice;
-    String introduction;
+    private static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private static final DecimalFormat decimalFormat = new DecimalFormat(",##0.00");
+    private YamlConfiguration lotteryInfo;
+    private final LiteLottery plugin;
+    private final Economy economy;
+    public File file;
+    public boolean isOK;
+    public double prizePool;
+    public boolean isRunLottery;
+    public boolean runLotteryFinish;
+    public List<String> numList = new ArrayList<>();
+    private String numbers;
+    private boolean notice;
+    private String introduction;
 
     public Lottery(LiteLottery plugin, Economy economy) {
         this.plugin = plugin;
         this.economy = economy;
-        consoleSender = plugin.consoleSender;
-        bukkitScheduler = plugin.bukkitScheduler;
         file = new File(plugin.getDataFolder(), getFileName());
         init();
         initNumber();
@@ -76,7 +69,7 @@ public class Lottery {
         if (!file.exists()) {
             try {
                 if (!file.createNewFile() && !file.createNewFile()) {
-                    consoleSender.sendMessage(MESSAGE_PREFIX + Messages.cannotCreateNewFile);
+                    plugin.getServer().getConsoleSender().sendMessage(Messages.messagePrefix + Messages.cannotCreateNewFile);
                     isOK = false;
                     return;
                 }
@@ -182,7 +175,7 @@ public class Lottery {
     }
 
     private void sendMessage(Player player, String message) {
-        player.sendMessage(MESSAGE_PREFIX + message);
+        player.sendMessage(Messages.messagePrefix + message);
     }
 
     public void placeBet(Player player, String[] args) {
@@ -267,7 +260,12 @@ public class Lottery {
             if (economy.has(player, money)) {
                 economy.withdrawPlayer(player, money);
                 addPrizePool(money);
-                addBetAmount(player.getName(), nums, amount);
+                //有些服主用命令控制一天多次开奖 所以要防止玩家钻空子把已开奖的号码再投一注变为等待开奖
+                if (!getBetState(player.getName(), nums).equals(Messages.s13)) {
+                    setBetAmount(player.getName(), nums, amount);
+                } else {
+                    addBetAmount(player.getName(), nums, amount);
+                }
                 //setBetState(player.getName(), nums, "§7(等待开奖)");
                 setBetState(player.getName(), nums, Messages.s13);
                 save();
@@ -317,6 +315,10 @@ public class Lottery {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             playSound(player, sound);
         }
+    }
+
+    private String getBetState(String player, String bet) {
+        return lotteryInfo.getString("bets." + player + "." + bet + ".state", Messages.s13);
     }
 
     private void setBetState(String player, String bet, String state) {
@@ -439,7 +441,7 @@ public class Lottery {
     }
 
     private void broadcastMessage(String message) {
-        plugin.getServer().broadcastMessage(MESSAGE_PREFIX + message);
+        plugin.getServer().broadcastMessage(Messages.messagePrefix + message);
     }
 
     public void tryRunLottery() {
@@ -451,7 +453,7 @@ public class Lottery {
     }
 
     private void runLottery() {
-        plugin.bukkitScheduler.runTaskAsynchronously(plugin, () -> {
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             ArrayList<String> prizeNum = new ArrayList<>();
             //broadcastMessage("§6§l正在开奖§6···");
             broadcastMessage(Messages.s18);
@@ -499,6 +501,9 @@ public class Lottery {
             for (String player : players) {
                 ArrayList<String> bets = getBets(player);
                 for (String bet : bets) {
+                    if (!getBetState(player, bet).equals(Messages.s13)) {
+                        continue; //已开过奖的号码不再开奖
+                    }
                     if (bet.equals(builder.toString())) {
                         //setBetState(player, bet, "§d§l(特等奖)");
                         setBetState(player, bet, Messages.s23);

@@ -6,30 +6,26 @@ import ml.mcos.litelottery.metrics.Metrics;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 public class LiteLottery extends JavaPlugin {
-    int mcVersion = getMinecraftVersion();
-    ConsoleCommandSender consoleSender = getServer().getConsoleSender();
-    BukkitScheduler bukkitScheduler = getServer().getScheduler();
-    int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
-    Economy economy;
-    Lottery lottery;
+    private int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
+    public int mcVersion = getMinecraftVersion();
+    private Economy economy;
+    private Lottery lottery;
 
     @Override
     public void onEnable() {
         getLogger().info("Minecraft version = 1." + mcVersion);
         if (init()) {
-            consoleSender.sendMessage("[LiteLottery] using economy system: §3" + economy.getName());
-            bukkitScheduler.runTaskTimerAsynchronously(this, () -> {
+            getServer().getConsoleSender().sendMessage("[LiteLottery] using economy system: §3" + economy.getName());
+            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
                 Calendar cal = Calendar.getInstance();
                 if (lottery.checkTime(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))) {
                     lottery.tryRunLottery();
@@ -42,7 +38,7 @@ public class LiteLottery extends JavaPlugin {
             }, 100, 100);
             new Metrics(this, 13291).addCustomChart(new Metrics.SimplePie("economy_plugin", () -> economy.getName()));
         } else {
-            consoleSender.sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
+            getServer().getConsoleSender().sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
             getServer().getPluginManager().disablePlugin(this);
         }
     }
@@ -146,8 +142,8 @@ public class LiteLottery extends JavaPlugin {
         }
     }
 
-    private void sendMessage(CommandSender sender, String s) {
-        sender.sendMessage(Messages.messagePrefix + s);
+    private void sendMessage(CommandSender sender, String msg) {
+        sender.sendMessage(Messages.messagePrefix + msg);
     }
 
     @SuppressWarnings("NullableProblems")
