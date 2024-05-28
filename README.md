@@ -1,6 +1,4 @@
 # LiteLottery
-https://www.mcbbs.net/thread-1276101-1-1.html
-
 <span>[ English | <a href="README_ZH.md">中文</a> ]</span>
 
 LiteLottery is a Minecraft server plugin that allows players to participate in a daily lottery game with customizable betting and prize settings.
