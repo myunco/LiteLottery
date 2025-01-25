@@ -5,19 +5,20 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 public class Config {
     public static int lotteryHour;
     public static int lotteryMinute;
     public static boolean notice;
     public static int maxNumber;
+    public static boolean usePoints;
     public static double initialPrizePool;
     public static double maxPrizePool;
-    public static double moneyPerBets;
-    public static int maxNums;
+    public static double moneyPerBet;
+    public static int maxNumbers;
     public static int maxBets;
     public static double fifthPrize;
     public static double fifthPrizeMax;
@@ -64,6 +65,7 @@ public class Config {
         } else if (maxNumber > 99) {
             maxNumber = 99;
         }
+        usePoints = config.getBoolean("usePoints", false);
         initialPrizePool = config.getDouble("initialPrizePool");
         if (initialPrizePool < 0) {
             initialPrizePool = 0;
@@ -72,13 +74,19 @@ public class Config {
         if (maxPrizePool < initialPrizePool) {
             maxPrizePool = initialPrizePool;
         }
-        moneyPerBets = config.getDouble("moneyPerBets");
-        if (moneyPerBets < 0) {
-            moneyPerBets = 0;
+        if (config.contains("moneyPerBets")) { //兼容旧版本
+            config.set("moneyPerBet", config.getDouble("moneyPerBets"));
         }
-        maxNums = config.getInt("maxNums");
-        if (maxNums < 0) {
-            maxNums = 0;
+        moneyPerBet = config.getDouble("moneyPerBet");
+        if (moneyPerBet < 0) {
+            moneyPerBet = 0;
+        }
+        if (config.contains("maxNums")) { //兼容旧版本
+            config.set("maxNumbers", config.getInt("maxNums"));
+        }
+        maxNumbers = config.getInt("maxNumbers");
+        if (maxNumbers < 0) {
+            maxNumbers = 0;
         }
         maxBets = config.getInt("maxBets");
         if (maxBets < 0) {
@@ -120,7 +128,7 @@ public class Config {
     public static YamlConfiguration loadConfiguration(File file, LiteLottery plugin) {
         YamlConfiguration config = new YamlConfiguration();
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8));
             StringBuilder builder = new StringBuilder();
             String line;
             try {

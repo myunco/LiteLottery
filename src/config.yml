@@ -2,16 +2,18 @@
 lotteryTime: '20:30'
 #开奖前十分钟发送开奖提醒消息
 notice: true
-#最大可选数字
+#最大可选数字 （最少5个 最多99个）
 maxNumber: 20
-#初始奖池
+#使用点券 true=使用点券(注意：点券不支持小数) false=使用金币
+usePoints: false
+#初始奖池 新一期奖池余额 = 上期剩余奖池 + 初始奖池
 initialPrizePool: 500000.0
 #奖池上限
 maxPrizePool: 50000000.0
 #每注金额
-moneyPerBets: 200.0
+moneyPerBet: 200.0
 #最大投注号码总量 0=无上限
-maxNums: 0
+maxNumbers: 0
 #最大投注总量 0=无上限
 maxBets: 0
 #五等奖每注奖金  20选5中此奖概率：1/4
@@ -44,4 +46,4 @@ ignorePrizePool: true
 #随机选号使用间隔(秒)
 randomInterval: 30
 #随机选号使用次数上限(每天)
-randomMax: 3
+randomMax: 2

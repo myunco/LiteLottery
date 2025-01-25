@@ -2,73 +2,94 @@ package ml.mcos.litelottery;
 
 import ml.mcos.litelottery.config.Config;
 import ml.mcos.litelottery.config.Messages;
+import ml.mcos.litelottery.core.Lottery;
+import ml.mcos.litelottery.economy.Currency;
+import ml.mcos.litelottery.economy.Money;
+import ml.mcos.litelottery.economy.Points;
 import ml.mcos.litelottery.metrics.Metrics;
+import ml.mcos.litelottery.util.Version;
 import net.milkbowl.vault.economy.Economy;
+import org.black_ixx.playerpoints.PlayerPoints;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class LiteLottery extends JavaPlugin {
     private int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
-    public int mcVersion = getMinecraftVersion();
-    private Economy economy;
+    public Version mcVersion;
+    private Currency currency;
     private Lottery lottery;
 
     @Override
     public void onEnable() {
-        getLogger().info("Minecraft version = 1." + mcVersion);
-        if (init()) {
-            getServer().getConsoleSender().sendMessage("[LiteLottery] using economy system: §3" + economy.getName());
-            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-                Calendar cal = Calendar.getInstance();
-                if (lottery.checkTime(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))) {
-                    lottery.tryRunLottery();
-                }
-                if (cal.get(Calendar.DAY_OF_MONTH) != day) {
-                    if (lottery.tryUpdate()) {
-                        day = cal.get(Calendar.DAY_OF_MONTH);
-                    }
-                }
-            }, 100, 100);
-            new Metrics(this, 13291).addCustomChart(new Metrics.SimplePie("economy_plugin", () -> economy.getName()));
-        } else {
-            getServer().getConsoleSender().sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
-            getServer().getPluginManager().disablePlugin(this);
-        }
+        mcVersion = new Version(getServer().getBukkitVersion());
+        getLogger().info("Minecraft version = " + mcVersion);
+        init();
+        new Metrics(this, 13291).addCustomChart(new Metrics.SimplePie("economy_plugin", () -> currency.getName()));
     }
 
-    private boolean setupEconomy() {
+    private void setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             getLogger().severe("未找到Vault，请检查是否正确安装Vault插件！");
-            return false;
+            return;
         }
         RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
         if (rsp == null) {
             getLogger().severe("未找到经济系统，请检查是否正确安装经济提供插件！(如Ess、CMI、Economy等)");
-            return false;
+            return;
         }
-        economy = rsp.getProvider();
-        return true;
+        getServer().getConsoleSender().sendMessage("[LiteLottery] Found EconomyProvider: §3v" + rsp.getPlugin().getDescription().getVersion());
+        currency = new Money(rsp.getProvider());
     }
 
-    private boolean init() {
+    public void setupPoints() {
+        PlayerPoints playerPoints = (PlayerPoints) getServer().getPluginManager().getPlugin("PlayerPoints");
+        if (playerPoints == null || !playerPoints.isEnabled()) {
+            getLogger().severe("未找到点券插件，请检查是否正确安装PlayerPoints插件！");
+            return;
+        }
+        currency = new Points(playerPoints.getAPI());
+        getServer().getConsoleSender().sendMessage("[LiteLottery] Found PlayerPoints: §3v" + playerPoints.getDescription().getVersion());
+    }
+
+    private void init() {
         Config.init(this);
         Messages.init(this);
-        if (setupEconomy()) {
-            lottery = new Lottery(this, economy);
-            return lottery.isOK;
+        if (Config.usePoints) {
+            setupPoints();
+        } else {
+            setupEconomy();
         }
-        return false;
-    }
-
-    public int getMinecraftVersion() {
-        return Integer.parseInt(getServer().getBukkitVersion().replace('-', '.').split("\\.")[1]);
+        if (currency != null) {
+            getServer().getConsoleSender().sendMessage("[LiteLottery] using currency system: §3" + currency.getName());
+            lottery = new Lottery(this, currency);
+            if (lottery.isOK) {
+                getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                    Calendar cal = Calendar.getInstance();
+                    if (lottery.checkTime(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))) {
+                        lottery.tryRunLottery();
+                    }
+                    if (cal.get(Calendar.DAY_OF_MONTH) != day) {
+                        if (lottery.tryUpdate()) {
+                            day = cal.get(Calendar.DAY_OF_MONTH);
+                        }
+                    }
+                }, 100, 100);
+                return;
+            }
+        }
+        getServer().getConsoleSender().sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
+        getServer().getPluginManager().disablePlugin(this);
     }
 
     @SuppressWarnings("NullableProblems")
@@ -103,27 +124,22 @@ public class LiteLottery extends JavaPlugin {
         }
         switch (args[0].toLowerCase()) {
             case "version":
-                sendMessage(sender, Messages.version + getDescription().getVersion());
+                sendMessage(sender, Messages.versionInfo + getDescription().getVersion());
                 break;
             case "reload":
-                Config.init(this);
-                lottery.initNumber();
-                if (!lottery.file.exists()) {
-                    lottery.prizePool = 0.0;
-                    lottery.init();
-                }
-                sendMessage(sender, Messages.reload);
+                init();
+                sendMessage(sender, Messages.configReloaded);
                 break;
             case "run":
                 if (lottery.isRunLottery) {
-                    sendMessage(sender, Messages.alreadyLottery);
+                    sendMessage(sender, Messages.alreadyDrawn);
                 } else {
                     lottery.tryRunLottery();
                 }
                 break;
             case "force":
                 if (lottery.isRunLottery && !lottery.runLotteryFinish) {
-                    sendMessage(sender, Messages.running1);
+                    sendMessage(sender, Messages.drawingInProgress);
                 } else {
                     lottery.isRunLottery = false;
                     lottery.tryRunLottery();
@@ -131,14 +147,14 @@ public class LiteLottery extends JavaPlugin {
                 break;
             case "forcefalse":
                 if (lottery.isRunLottery && !lottery.runLotteryFinish) {
-                    sendMessage(sender, Messages.running2);
+                    sendMessage(sender, Messages.settingDrawState);
                 } else {
                     lottery.forceFalse();
-                    sendMessage(sender, Messages.forceFalse);
+                    sendMessage(sender, Messages.drawStateReset);
                 }
                 break;
             default:
-                sendMessage(sender, Messages.unknownArgs);
+                sendMessage(sender, Messages.unknownCommandArgs);
         }
     }
 
@@ -155,22 +171,37 @@ public class LiteLottery extends JavaPlugin {
                 if (args.length == 2) {
                     list.add("random");
                 }
-                list.removeAll(mergeNums(args));
+                list.removeAll(asList(args));
                 return TabComplete.getCompleteList(args, list);
             }
         }
         return TabComplete.getCompleteList(args, TabComplete.getTabList(args, command.getName()));
     }
 
-    private static ArrayList<String> mergeNums(String[] args) {
-        ArrayList<String> nums = new ArrayList<>();
+    private static ArrayList<String> asList(String[] args) {
+        ArrayList<String> list = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
             if (args[i].isEmpty()) {
                 continue;
             }
-            nums.add(args[i]);
+            list.add(args[i]);
         }
-        return nums;
+        return list;
     }
 
+    private Method getOnlinePlayers;
+    public Collection<? extends Player> getOnlinePlayers() {
+        if (mcVersion.getMinor() > 7 || (mcVersion.getMinor() == 7 && mcVersion.getPatch() == 10)) {
+            return getServer().getOnlinePlayers();
+        }
+        try {
+            if (getOnlinePlayers == null) {
+                getOnlinePlayers = Class.forName("org.bukkit.Server").getMethod("getOnlinePlayers");
+            }
+            return Arrays.asList((Player[]) getOnlinePlayers.invoke(getServer()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
 }
