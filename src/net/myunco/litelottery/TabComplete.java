@@ -1,4 +1,4 @@
-package ml.mcos.litelottery;
+package net.myunco.litelottery;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -1,4 +1,4 @@
-package ml.mcos.litelottery.metrics;
+package net.myunco.litelottery.metrics;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -27,6 +27,8 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 import javax.net.ssl.HttpsURLConnection;
+
+import net.myunco.litelottery.LiteLottery;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -88,7 +90,7 @@ public class Metrics {
                         enabled,
                         this::appendPlatformData,
                         this::appendServiceData,
-                        submitDataTask -> Bukkit.getScheduler().runTask(plugin, submitDataTask),
+                        submitDataTask -> ((LiteLottery) plugin).getScheduler().runTask(submitDataTask),
                         plugin::isEnabled,
                         (message, error) -> this.plugin.getLogger().log(Level.WARNING, message, error),
                         (message) -> this.plugin.getLogger().log(Level.INFO, message),

@@ -1,4 +1,4 @@
-package ml.mcos.litelottery.economy;
+package net.myunco.litelottery.economy;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;

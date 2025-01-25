@@ -1,13 +1,16 @@
-package ml.mcos.litelottery;
+package net.myunco.litelottery;
 
-import ml.mcos.litelottery.config.Config;
-import ml.mcos.litelottery.config.Messages;
-import ml.mcos.litelottery.core.Lottery;
-import ml.mcos.litelottery.economy.Currency;
-import ml.mcos.litelottery.economy.Money;
-import ml.mcos.litelottery.economy.Points;
-import ml.mcos.litelottery.metrics.Metrics;
-import ml.mcos.litelottery.util.Version;
+import net.myunco.litelottery.config.Config;
+import net.myunco.litelottery.config.Messages;
+import net.myunco.litelottery.core.Lottery;
+import net.myunco.litelottery.economy.Currency;
+import net.myunco.litelottery.economy.Money;
+import net.myunco.litelottery.economy.Points;
+import net.myunco.litelottery.metrics.Metrics;
+import net.myunco.litelottery.task.BukkitScheduler;
+import net.myunco.litelottery.task.CompatibleScheduler;
+import net.myunco.litelottery.task.FoliaScheduler;
+import net.myunco.litelottery.util.Version;
 import net.milkbowl.vault.economy.Economy;
 import org.black_ixx.playerpoints.PlayerPoints;
 import org.bukkit.command.Command;
@@ -29,6 +32,9 @@ public class LiteLottery extends JavaPlugin {
     public Version mcVersion;
     private Currency currency;
     private Lottery lottery;
+    private CompatibleScheduler scheduler;
+    private boolean ready = false;
+    public boolean isFolia = isFolia();
 
     @Override
     public void onEnable() {
@@ -48,7 +54,6 @@ public class LiteLottery extends JavaPlugin {
             getLogger().severe("未找到经济系统，请检查是否正确安装经济提供插件！(如Ess、CMI、Economy等)");
             return;
         }
-        getServer().getConsoleSender().sendMessage("[LiteLottery] Found EconomyProvider: §3v" + rsp.getPlugin().getDescription().getVersion());
         currency = new Money(rsp.getProvider());
     }
 
@@ -74,7 +79,7 @@ public class LiteLottery extends JavaPlugin {
             getServer().getConsoleSender().sendMessage("[LiteLottery] using currency system: §3" + currency.getName());
             lottery = new Lottery(this, currency);
             if (lottery.isOK) {
-                getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                getScheduler().runTaskTimerAsynchronously(() -> {
                     Calendar cal = Calendar.getInstance();
                     if (lottery.checkTime(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))) {
                         lottery.tryRunLottery();
@@ -85,17 +90,20 @@ public class LiteLottery extends JavaPlugin {
                         }
                     }
                 }, 100, 100);
+                ready = true;
                 return;
             }
         }
         getServer().getConsoleSender().sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
-        getServer().getPluginManager().disablePlugin(this);
+        ready = false;
+        // getServer().getPluginManager().disablePlugin(this);
     }
 
-    @SuppressWarnings("NullableProblems")
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equals("LiteLottery")) {
+        if (!ready) {
+            sendMessage(sender, "§c初始化失败, 插件无法使用, 请检查控制台报错.");
+        } else if (command.getName().equals("LiteLottery")) {
             commandLiteLottery(sender, args);
         } else {
             commandLottery(sender, args);
@@ -162,7 +170,6 @@ public class LiteLottery extends JavaPlugin {
         sender.sendMessage(Messages.messagePrefix + msg);
     }
 
-    @SuppressWarnings("NullableProblems")
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (command.getName().equals("Lottery") && args.length > 1 && sender instanceof Player) {
@@ -203,5 +210,25 @@ public class LiteLottery extends JavaPlugin {
             e.printStackTrace();
             return Collections.emptyList();
         }
+    }
+
+    private boolean isFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public CompatibleScheduler getScheduler() {
+        if (scheduler == null) {
+            if (isFolia) {
+                scheduler = new FoliaScheduler(this);
+            } else {
+                scheduler = new BukkitScheduler(this);
+            }
+        }
+        return scheduler;
     }
 }

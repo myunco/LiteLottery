@@ -1,4 +1,4 @@
-package ml.mcos.litelottery.util;
+package net.myunco.litelottery.util;
 
 public class Version {
     private final int major;

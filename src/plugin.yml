@@ -1,10 +1,12 @@
 name: LiteLottery
-main: ml.mcos.litelottery.LiteLottery
-version: 1.3.2-SNAPSHOT
+main: net.myunco.litelottery.LiteLottery
+version: 1.4.0-SNAPSHOT
 api-version: 1.13
 author: myunco
 softdepend:
   - Vault
+  - PlayerPoints
+folia-supported: true
 commands:
   LiteLottery:
     aliases: lot

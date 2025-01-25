@@ -1,4 +1,4 @@
-package ml.mcos.litelottery.economy;
+package net.myunco.litelottery.economy;
 
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.OfflinePlayer;

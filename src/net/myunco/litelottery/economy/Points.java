@@ -1,4 +1,4 @@
-package ml.mcos.litelottery.economy;
+package net.myunco.litelottery.economy;
 
 import org.black_ixx.playerpoints.PlayerPointsAPI;
 import org.bukkit.OfflinePlayer;

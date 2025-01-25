@@ -1,6 +1,6 @@
-package ml.mcos.litelottery.config;
+package net.myunco.litelottery.config;
 
-import ml.mcos.litelottery.LiteLottery;
+import net.myunco.litelottery.LiteLottery;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.BufferedReader;

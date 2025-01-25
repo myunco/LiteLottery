@@ -1,9 +1,9 @@
-package ml.mcos.litelottery.core;
+package net.myunco.litelottery.core;
 
-import ml.mcos.litelottery.LiteLottery;
-import ml.mcos.litelottery.config.Config;
-import ml.mcos.litelottery.config.Messages;
-import ml.mcos.litelottery.economy.Currency;
+import net.myunco.litelottery.LiteLottery;
+import net.myunco.litelottery.config.Config;
+import net.myunco.litelottery.config.Messages;
+import net.myunco.litelottery.economy.Currency;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
@@ -225,7 +225,7 @@ public class Lottery {
             }
             if (args.length == 2 && args[1].equals("random")) {
                 String playerName = player.getName();
-                if (getRandomCount(playerName) >= Config.randomMax) {
+                if (getRandomCount(playerName) >= Config.randomMax && !player.hasPermission("LiteLottery.bypass")) {
                     sendMessage(player, Messages.randomLimitReached);
                 } else if (player.hasPermission("LiteLottery.bypass") || checkRandomInterval(playerName)) {
                     if (buyLottery(player, String.join(" ", randomNumber()), amount)) {
@@ -321,6 +321,19 @@ public class Lottery {
                 case "ENTITY_ENDER_DRAGON_DEATH":
                     sound = "ENDERDRAGON_DEATH";
             }
+        } else if (plugin.isFolia) {
+            switch (sound) {
+                case "ENTITY_EXPERIENCE_ORB_PICKUP":
+                    playSound(player, Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
+                    return;
+                case "ENTITY_PLAYER_LEVELUP":
+                    playSound(player, Sound.ENTITY_PLAYER_LEVELUP);
+                    return;
+                case "ENTITY_ENDER_DRAGON_DEATH":
+                    playSound(player, Sound.ENTITY_ENDER_DRAGON_DEATH);
+                    return;
+            }
+            return;
         }
         playSound(player, Sound.valueOf(sound));
     }
@@ -470,7 +483,7 @@ public class Lottery {
     }
 
     private void runLottery() {
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+        plugin.getScheduler().runTaskAsynchronously(() -> {
             ArrayList<String> prizeNum = new ArrayList<>();
             broadcastMessage(Messages.drawing);
             sendTitleAll(Messages.drawingInProgressTitle, "§k00 00 00 00 00", 5);
@@ -661,7 +674,6 @@ public class Lottery {
         return names.toString();
     }
 
-    @SuppressWarnings("deprecation")
     private OfflinePlayer getOfflinePlayer(String player) {
         return plugin.getServer().getOfflinePlayer(player);
     }
