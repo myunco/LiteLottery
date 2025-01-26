@@ -25,41 +25,43 @@ import java.util.Set;
 public class Lottery {
     private static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private static final DecimalFormat decimalFormat = new DecimalFormat(",##0.00");
-    private YamlConfiguration lotteryInfo;
+    private YamlConfiguration lotteryData;
     private final LiteLottery plugin;
     private final Currency currency;
-    public File file;
-    public boolean isOK;
-    public double prizePool = -1;
-    public boolean isRunLottery;
-    public boolean runLotteryFinish;
-    public List<String> numList = new ArrayList<>();
-    private String numbers;
-    private boolean notice;
-    private String introduction;
+    private File dataFile;
+    public boolean isInitialized;
+    private double prizePoolBalance = -1;
+    public boolean drawing;
+    public boolean drawCompleted;
+    private boolean drawNotice;
+    public List<String> availableNumbers = new ArrayList<>();
+    private String formattedNumbers;
+    private String gameIntroduction;
+    private final File dataFolder;
 
     public Lottery(LiteLottery plugin, Currency currency) {
         this.plugin = plugin;
         this.currency = currency;
-        file = new File(plugin.getDataFolder(), getFileName());
+        this.dataFolder = new File(plugin.getDataFolder(), "data/");
+        this.dataFile = new File(dataFolder, getFileName());
         init();
         initNumber();
     }
 
     public void initNumber() {
-        if (!numList.isEmpty()) {
-            numList.clear();
+        if (!availableNumbers.isEmpty()) {
+            availableNumbers.clear();
         }
         StringBuilder builder = new StringBuilder();
         for (int i = 1; i <= Config.maxNumber; i++) {
             String num = getNum(i);
             builder.append(num);
-            numList.add(num);
+            availableNumbers.add(num);
             if (i < Config.maxNumber) {
                 builder.append(' ');
             }
         }
-        numbers = builder.toString();
+        formattedNumbers = builder.toString();
     }
 
     public static String getNum(int n) {
@@ -68,26 +70,27 @@ public class Lottery {
 
     public void init() {
         String lastFileName = getLastFileName();
-        if (!file.exists()) {
+        if (!dataFile.exists()) {
             try {
-                if (!file.createNewFile() && !file.createNewFile()) { // 尝试创建两次
+                if (!dataFile.createNewFile()) {
                     plugin.getServer().getConsoleSender().sendMessage(Messages.messagePrefix + Messages.fileCreationFailed);
-                    isOK = false;
+                    isInitialized = false;
                     return;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-                isOK = false;
+                isInitialized = false;
+                return;
             }
         }
-        lotteryInfo = Config.loadConfiguration(file, plugin);
-        if (!lotteryInfo.contains("prizePool")) {
-            if (prizePool == -1) { // 如果奖池余额为-1，则表示是第一次运行init，需要初始化奖池余额。
+        lotteryData = Config.loadConfiguration(dataFile, plugin);
+        if (!lotteryData.contains("prizePoolBalance")) {
+            if (prizePoolBalance == -1) { // 如果奖池余额为-1，则表示是第一次运行init，需要初始化奖池余额。
                 if (lastFileName.isEmpty()) {
-                    prizePool = Config.initialPrizePool; // 新一期奖池余额 = 初始奖池
+                    prizePoolBalance = Config.initialPrizePool; // 新一期奖池余额 = 初始奖池
                 } else {
-                    YamlConfiguration lastLotInfo = Config.loadConfiguration(new File(plugin.getDataFolder(), lastFileName), plugin);
-                    prizePool = lastLotInfo.getDouble("prizePool"); // 奖池余额 = 上一期奖池余额
+                    YamlConfiguration lastLotInfo = Config.loadConfiguration(new File(dataFolder, lastFileName), plugin);
+                    prizePoolBalance = lastLotInfo.getDouble("prizePoolBalance"); // 奖池余额 = 上一期奖池余额
                     addPrizePool(Config.initialPrizePool); // 新一期奖池余额 = 上期奖池余额 + 初始奖池
                 }
             } else {
@@ -95,22 +98,22 @@ public class Lottery {
             }
             save();
         } else {
-            prizePool = lotteryInfo.getDouble("prizePool"); // 如果奖池余额存在，则直接读取。
+            prizePoolBalance = lotteryData.getDouble("prizePoolBalance"); // 如果奖池余额存在，则直接读取。
         }
-        isRunLottery = lotteryInfo.getBoolean("isRunLottery");
-        runLotteryFinish = isRunLottery;
-        notice = false;
-        introduction = String.format(Messages.gameIntroduction,
+        drawing = lotteryData.getBoolean("drawCompleted");
+        drawCompleted = drawing;
+        drawNotice = false;
+        gameIntroduction = String.format(Messages.gameIntroduction,
                 formatDecimal(Config.moneyPerBet),  getLotteryTime(),
                 formatDecimal(Config.fifthPrize), formatDecimal(Config.fourthPrize),
                 formatDecimal(Config.thirdPrize), formatDecimal(Config.secondPrize),
                 formatDecimal(Config.firstPrize), formatDecimal(Config.specialPrize));
-        isOK = true;
+        isInitialized = true;
     }
 
     private void save() {
         try {
-            lotteryInfo.save(file);
+            lotteryData.save(dataFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -123,8 +126,8 @@ public class Lottery {
     private String getLastFileName() {
         // 文件名的格式是yyyy-MM-dd.yml 例如2025-01-21.yml，但上一次的文件名是不确定的，因为不能保证插件每天都在运行，如果有一天没有运行，那么上一次的文件名就不是昨天了。
         // 本方法的目的是获取离今天最近的一个存在的文件名，例如今天是2025-01-21，那么上一次的文件名可能是2025-01-15，因为2025-01-16到2025-01-20这几天插件没有运行。
-        // 本方法的实现思路是遍历plugin.getDataFolder()目录下的所有名为yyyy-MM-dd格式的.yml文件，找到离今天最近的一个文件名，如果没有找到就返回空字符串。
-        File[] files = plugin.getDataFolder().listFiles((dir, name) -> name.matches("\\d{4}-\\d{2}-\\d{2}\\.yml"));
+        // 本方法的实现思路是遍历dataFolder目录下的所有名为yyyy-MM-dd格式的.yml文件，找到离今天最近的一个文件名，如果没有找到就返回空字符串。
+        File[] files = dataFolder.listFiles((dir, name) -> name.matches("\\d{4}-\\d{2}-\\d{2}\\.yml"));
         if (files == null || files.length == 0) {
             return "";
         }
@@ -146,40 +149,40 @@ public class Lottery {
     }
 
     private void addPrizePool(double value) {
-        prizePool += value;
-        if (prizePool > Config.maxPrizePool) {
-            prizePool = Config.maxPrizePool;
+        prizePoolBalance += value;
+        if (prizePoolBalance > Config.maxPrizePool) {
+            prizePoolBalance = Config.maxPrizePool;
         }
-        setPrizePool(prizePool);
+        setPrizePoolBalance(prizePoolBalance);
     }
 
     private void subPrizePool(double value) {
-        prizePool -= value;
-        if (prizePool < 0) {
-            prizePool = 0;
+        prizePoolBalance -= value;
+        if (prizePoolBalance < 0) {
+            prizePoolBalance = 0;
         }
-        setPrizePool(prizePool);
+        setPrizePoolBalance(prizePoolBalance);
     }
 
-    private void setPrizePool(double value) {
-        prizePool = value;
-        setValue("prizePool", prizePool);
+    private void setPrizePoolBalance(double value) {
+        prizePoolBalance = value;
+        setValue("prizePoolBalance", prizePoolBalance);
     }
 
     private void setValue(String path, Object value) {
-        lotteryInfo.set(path, value);
+        lotteryData.set(path, value);
     }
 
     public void showLotteryInfo(Player player) {
-        sendMessage(player, introduction);
+        sendMessage(player, gameIntroduction);
         sendMessage(player, Messages.bettingInstructions);
-        sendMessage(player, Messages.availableNumbers + numbers);
-        sendMessage(player, Messages.currentPrizePool + formatDecimal(prizePool));
+        sendMessage(player, Messages.availableNumbers + formattedNumbers);
+        sendMessage(player, Messages.currentPrizePool + formatDecimal(prizePoolBalance));
         showBets(player);
     }
 
     private void showBets(Player player) {
-        ConfigurationSection cs = lotteryInfo.getConfigurationSection("bets." + player.getName());
+        ConfigurationSection cs = lotteryData.getConfigurationSection("bets." + player.getName());
         if (cs == null) {
             return;
         }
@@ -211,7 +214,7 @@ public class Lottery {
     }
 
     public void placeBet(Player player, String[] args) {
-        if (isRunLottery) {
+        if (drawing) {
             sendMessage(player, Messages.drawCompleted);
         } else if (args.length < 2) {
             sendMessage(player, Messages.usageInstructions);
@@ -238,21 +241,21 @@ public class Lottery {
                 }
                 return;
             }
-            String nums = mergeArgs(args);
-            if (checkNum(player, nums)) {
-                buyLottery(player, nums, amount);
+            String selectedNumbers = mergeArgs(args);
+            if (checkNum(player, selectedNumbers)) {
+                buyLottery(player, selectedNumbers, amount);
             }
         }
     }
 
     private boolean checkNum(Player player, String s) {
-        String[] nums = s.split(" ");
+        String[] selectedNumbers = s.split(" ");
         ArrayList<String> temp = new ArrayList<>();
-        for (String num : nums) {
+        for (String num : selectedNumbers) {
             if (temp.contains(num)) {
                 sendMessage(player, Messages.duplicateNumber + num);
                 return false;
-            } else if (!numList.contains(num)) {
+            } else if (!availableNumbers.contains(num)) {
                 sendMessage(player, Messages.invalidNumber + num);
                 return false;
             }
@@ -272,8 +275,8 @@ public class Lottery {
         return builder.toString();
     }
 
-    private boolean buyLottery(Player player, String nums, int amount) {
-        if (Config.maxNumbers != 0 && getBetNums(player.getName()) == Config.maxNumbers && getBetAmount(player.getName(), nums) == 0) {
+    private boolean buyLottery(Player player, String selectedNumbers, int amount) {
+        if (Config.maxNumbers != 0 && getBetNumbers(player.getName()) == Config.maxNumbers && getBetAmount(player.getName(), selectedNumbers) == 0) {
             sendMessage(player, Messages.maxBetsReached);
         } else if (Config.maxBets != 0 && getBetsAmount(player.getName()) + amount > Config.maxBets) {
             sendMessage(player, Messages.betLimitExceeded);
@@ -283,14 +286,14 @@ public class Lottery {
                 currency.withdrawPlayer(player, money);
                 addPrizePool(money);
                 //有些服主用命令控制一天多次开奖 所以要防止玩家钻空子把已开奖的号码再投一注变为等待开奖
-                if (!getBetState(player.getName(), nums).equals(Messages.awaitingDraw)) {
-                    setBetAmount(player.getName(), nums, amount);
+                if (!getBetState(player.getName(), selectedNumbers).equals(Messages.awaitingDraw)) {
+                    setBetAmount(player.getName(), selectedNumbers, amount);
                 } else {
-                    addBetAmount(player.getName(), nums, amount);
+                    addBetAmount(player.getName(), selectedNumbers, amount);
                 }
-                setBetState(player.getName(), nums, Messages.awaitingDraw);
+                setBetState(player.getName(), selectedNumbers, Messages.awaitingDraw);
                 save();
-                sendMessage(player, Messages.getMessage(Messages.betPlaced, String.valueOf(amount), nums) + formatDecimal(money));
+                sendMessage(player, Messages.getMessage(Messages.betPlaced, String.valueOf(amount), selectedNumbers) + formatDecimal(money));
                 playSound(player);
                 return true;
             } else {
@@ -349,7 +352,7 @@ public class Lottery {
     }
 
     private String getBetState(String player, String bet) {
-        return lotteryInfo.getString("bets." + player + "." + bet + ".state", Messages.awaitingDraw);
+        return lotteryData.getString("bets." + player + "." + bet + ".state", Messages.awaitingDraw);
     }
 
     private void setBetState(String player, String bet, String state) {
@@ -365,11 +368,11 @@ public class Lottery {
     }
 
     private int getBetAmount(String player, String bet) {
-        return lotteryInfo.getInt("bets." + player + "." + bet + ".amount");
+        return lotteryData.getInt("bets." + player + "." + bet + ".amount");
     }
 
     private int getBetsAmount(String player) {
-        ConfigurationSection cs = lotteryInfo.getConfigurationSection("bets." + player);
+        ConfigurationSection cs = lotteryData.getConfigurationSection("bets." + player);
         if (cs == null) {
             return 0;
         }
@@ -385,8 +388,8 @@ public class Lottery {
         return amount;
     }
 
-    private int getBetNums(String player) {
-        ConfigurationSection cs = lotteryInfo.getConfigurationSection("bets." + player);
+    private int getBetNumbers(String player) {
+        ConfigurationSection cs = lotteryData.getConfigurationSection("bets." + player);
         return cs == null ? 0 : cs.getKeys(false).size();
     }
 
@@ -424,7 +427,7 @@ public class Lottery {
     }
 
     private long getRandomTime(String player) {
-        return lotteryInfo.getLong("random." + player + ".time");
+        return lotteryData.getLong("random." + player + ".time");
     }
 
     private void addRandomCount(String player) {
@@ -436,7 +439,7 @@ public class Lottery {
     }
 
     private int getRandomCount(String player) {
-        return lotteryInfo.getInt("random." + player + ".count");
+        return lotteryData.getInt("random." + player + ".count");
     }
 
     /**
@@ -456,7 +459,7 @@ public class Lottery {
     public boolean checkTime(int hour, int minute) {
         if (hour == Config.lotteryHour && minute == Config.lotteryMinute) {
             return true;
-        } else if (Config.notice && !notice) {
+        } else if (Config.notice && !drawNotice) {
             minute += 10;
             if (minute > 59) {
                 hour++; //hour超过23也无所谓 设计就是如果开奖时间在00:10之前则不提示开奖
@@ -464,7 +467,7 @@ public class Lottery {
             }
             if (hour == Config.lotteryHour && minute == Config.lotteryMinute) {
                 broadcastMessage(Messages.drawNotice);
-                notice = true;
+                drawNotice = true;
             }
         }
         return false;
@@ -475,16 +478,16 @@ public class Lottery {
     }
 
     public void tryRunLottery() {
-        if (!isRunLottery) {
-            isRunLottery = true;
-            setValue("isRunLottery", true);
+        if (!drawing) {
+            drawing = true;
+            setValue("drawCompleted", true);
             runLottery();
         }
     }
 
     private void runLottery() {
         plugin.getScheduler().runTaskAsynchronously(() -> {
-            ArrayList<String> prizeNum = new ArrayList<>();
+            ArrayList<String> winningNumbers = new ArrayList<>();
             broadcastMessage(Messages.drawing);
             sendTitleAll(Messages.drawingInProgressTitle, "§k00 00 00 00 00", 5);
             playSoundAll("ENTITY_EXPERIENCE_ORB_PICKUP");
@@ -495,12 +498,12 @@ public class Lottery {
             }
             StringBuilder builder = new StringBuilder();
             for (int i = 1; i < 5; i++) {
-                randomNumber(prizeNum);
-                broadcastMessage(Messages.getMessage(Messages.winningNumber, String.valueOf(i)) + prizeNum.get(i - 1));
+                randomNumber(winningNumbers);
+                broadcastMessage(Messages.getMessage(Messages.winningNumber, String.valueOf(i)) + winningNumbers.get(i - 1));
                 if (i != 1) {
                     builder.append(' ');
                 }
-                builder.append(prizeNum.get(i - 1));
+                builder.append(winningNumbers.get(i - 1));
                 sendTitleAll(Messages.drawingInProgressTitle, "§c" + builder + " §r§k" + repeat00(5 - i), 5);
                 playSoundAll("ENTITY_EXPERIENCE_ORB_PICKUP");
                 try {
@@ -509,12 +512,12 @@ public class Lottery {
                     e.printStackTrace();
                 }
             }
-            randomNumber(prizeNum);
-            broadcastMessage(Messages.getMessage(Messages.winningNumber, "5") + prizeNum.get(4));
-            builder.append(' ').append(prizeNum.get(4));
+            randomNumber(winningNumbers);
+            broadcastMessage(Messages.getMessage(Messages.winningNumber, "5") + winningNumbers.get(4));
+            builder.append(' ').append(winningNumbers.get(4));
             sendTitleAll(Messages.currentWinningNumbers, "§a" + builder, 7);
             broadcastMessage(Messages.winningNumbers + builder);
-            setValue("prizeNumber", builder.toString());
+            setValue("winningNumbers", builder.toString());
             HashMap<String, Integer> firstPrize = new HashMap<>();
             HashMap<String, Integer> secondPrize = new HashMap<>();
             HashMap<String, Integer> thirdPrize = new HashMap<>();
@@ -546,10 +549,10 @@ public class Lottery {
                             sendMessage(p, Messages.specialPrizeAmount + formatDecimal(money));
                         }
                     } else {
-                        String[] nums = bet.split(" ");
+                        String[] numbers = bet.split(" ");
                         int count = 0;
-                        for (String num : nums) {
-                            if (prizeNum.contains(num)) {
+                        for (String num : numbers) {
+                            if (winningNumbers.contains(num)) {
                                 count++;
                             }
                         }
@@ -577,46 +580,46 @@ public class Lottery {
                     }
                 }
             }
-            String firstPrizeResult;
-            String secondPrizeResult;
-            String thirdPrizeResult;
-            String fifthPrizeResult;
-            String fourthPrizeResult;
+            String firstPrizeWinners;
+            String secondPrizeWinners;
+            String thirdPrizeWinners;
+            String fifthPrizeWinners;
+            String fourthPrizeWinners;
             if (fourthPrize.isEmpty()) {
-                fourthPrizeResult = Messages.noFifthPrize;
+                fourthPrizeWinners = Messages.noFifthPrize;
             } else {
-                fourthPrizeResult = Messages.fifthPrizeWinners + getNamesAndGiveMoney(fourthPrize, Config.fifthPrize, Config.fifthPrizeMax, Messages.fifthPrizeLabel);
+                fourthPrizeWinners = Messages.fifthPrizeWinners + getNamesAndGiveMoney(fourthPrize, Config.fifthPrize, Config.fifthPrizeMax, Messages.fifthPrizeLabel);
             }
             if (fifthPrize.isEmpty()) {
-                fifthPrizeResult = Messages.noFourthPrize;
+                fifthPrizeWinners = Messages.noFourthPrize;
             } else {
-                fifthPrizeResult = Messages.fourthPrizeWinners + getNamesAndGiveMoney(fifthPrize, Config.fourthPrize, Config.fourthPrizeMax, Messages.fourthPrizeLabel);
+                fifthPrizeWinners = Messages.fourthPrizeWinners + getNamesAndGiveMoney(fifthPrize, Config.fourthPrize, Config.fourthPrizeMax, Messages.fourthPrizeLabel);
             }
             if (thirdPrize.isEmpty()) {
-                thirdPrizeResult = Messages.noThirdPrize;
+                thirdPrizeWinners = Messages.noThirdPrize;
             } else {
-                thirdPrizeResult = Messages.thirdPrizeWinners + getNamesAndGiveMoney(thirdPrize, Config.thirdPrize, Config.thirdPrizeMax, Messages.thirdPrizeLabel);
+                thirdPrizeWinners = Messages.thirdPrizeWinners + getNamesAndGiveMoney(thirdPrize, Config.thirdPrize, Config.thirdPrizeMax, Messages.thirdPrizeLabel);
             }
-            double prizePoolTemp = prizePool;
+            double prizePoolTemp = prizePoolBalance;
             if (secondPrize.isEmpty()) {
-                secondPrizeResult = Messages.noSecondPrize;
+                secondPrizeWinners = Messages.noSecondPrize;
             } else {
-                secondPrizeResult = Messages.secondPrizeWinners + getNamesAndBalance(secondPrize, prizePoolTemp * 0.25, Config.secondPrize, Messages.secondPrizeMessage);
+                secondPrizeWinners = Messages.secondPrizeWinners + getNamesAndBalance(secondPrize, prizePoolTemp * 0.25, Config.secondPrize, Messages.secondPrizeMessage);
                 subPrizePool(prizePoolTemp * 0.25);
             }
             if (firstPrize.isEmpty()) {
-                firstPrizeResult = Messages.noFirstPrize;
+                firstPrizeWinners = Messages.noFirstPrize;
             } else {
-                firstPrizeResult = Messages.firstPrizeWinners + getNamesAndBalance(firstPrize, prizePoolTemp * 0.75, Config.firstPrize, Messages.firstPrizeMessage);
+                firstPrizeWinners = Messages.firstPrizeWinners + getNamesAndBalance(firstPrize, prizePoolTemp * 0.75, Config.firstPrize, Messages.firstPrizeMessage);
                 subPrizePool(prizePoolTemp * 0.75);
             }
             broadcastMessage(Messages.drawResults);
-            broadcastMessage(firstPrizeResult);
-            broadcastMessage(secondPrizeResult);
-            broadcastMessage(thirdPrizeResult);
-            broadcastMessage(fifthPrizeResult);
-            broadcastMessage(fourthPrizeResult);
-            runLotteryFinish = true;
+            broadcastMessage(firstPrizeWinners);
+            broadcastMessage(secondPrizeWinners);
+            broadcastMessage(thirdPrizeWinners);
+            broadcastMessage(fifthPrizeWinners);
+            broadcastMessage(fourthPrizeWinners);
+            drawCompleted = true;
             save();
         });
     }
@@ -650,15 +653,15 @@ public class Lottery {
             Player p = plugin.getServer().getPlayerExact(entry.getKey());
             OfflinePlayer player = p == null ? getOfflinePlayer(entry.getKey()) : p;
             double money = Math.min(moneyPerBets * entry.getValue(), maxMoney);
-            if (Config.ignorePrizePool || prizePool >= money) { //忽略奖池余额或奖池余额大于等于奖金
+            if (Config.ignorePrizePool || prizePoolBalance >= money) { //忽略奖池余额或奖池余额大于等于奖金
                 subPrizePool(money); //从奖池里扣钱
                 currency.depositPlayer(player, money);
                 if (p != null) {
                     playSound(p, "ENTITY_PLAYER_LEVELUP");
                     sendMessage(p, Messages.getMessage(Messages.prizeWon, String.valueOf(entry.getValue()), prize) + formatDecimal(money));
                 }
-            } else if (prizePool != 0) { //奖池余额小于奖金且奖池余额不为0
-                money = prizePool;
+            } else if (prizePoolBalance != 0) { //奖池余额小于奖金且奖池余额不为0
+                money = prizePoolBalance;
                 subPrizePool(money);
                 currency.depositPlayer(player, money);
                 if (p != null) {
@@ -679,7 +682,7 @@ public class Lottery {
     }
 
     private ArrayList<String> getBets(String player) {
-        ConfigurationSection cs = lotteryInfo.getConfigurationSection("bets." + player);
+        ConfigurationSection cs = lotteryData.getConfigurationSection("bets." + player);
         ArrayList<String> bets = new ArrayList<>();
         if (cs == null) {
             return bets;
@@ -689,7 +692,7 @@ public class Lottery {
     }
 
     private ArrayList<String> getPlayers() {
-        ConfigurationSection cs = lotteryInfo.getConfigurationSection("bets");
+        ConfigurationSection cs = lotteryData.getConfigurationSection("bets");
         ArrayList<String> players = new ArrayList<>();
         if (cs == null) {
             return players;
@@ -721,18 +724,18 @@ public class Lottery {
     }
 
     public boolean tryUpdate() {
-        if (isRunLottery && !runLotteryFinish) {
+        if (drawing && !drawCompleted) {
             return false;
         }
-        file = new File(file.getParent(), getFileName());
+        dataFile = new File(dataFolder, getFileName());
         init();
         return true;
     }
 
-    public void forceFalse() {
-        if (isRunLottery) {
-            isRunLottery = false;
-            setValue("isRunLottery", false);
+    public void resetDrawState() {
+        if (drawing) {
+            drawing = false;
+            setValue("drawCompleted", false);
             save();
         }
     }

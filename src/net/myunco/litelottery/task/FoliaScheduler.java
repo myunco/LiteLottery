@@ -39,12 +39,12 @@ public class FoliaScheduler implements CompatibleScheduler {
 
     @Override
     public void runTaskLaterAsynchronously(Runnable task, long delay) {
-        asyncScheduler.runDelayed(plugin, tscheduledTask -> task.run(), delay, TimeUnit.SECONDS);
+        asyncScheduler.runDelayed(plugin, tscheduledTask -> task.run(), delay * 50, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void runTaskTimerAsynchronously(Runnable task, long delay, long period) {
-        asyncScheduler.runAtFixedRate(plugin, tscheduledTask -> task.run(), delay, period, TimeUnit.SECONDS);
+        asyncScheduler.runAtFixedRate(plugin, tscheduledTask -> task.run(), delay * 50, period * 50, TimeUnit.MILLISECONDS);
     }
 
     @Override

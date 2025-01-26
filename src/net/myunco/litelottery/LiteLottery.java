@@ -10,6 +10,9 @@ import net.myunco.litelottery.metrics.Metrics;
 import net.myunco.litelottery.task.BukkitScheduler;
 import net.myunco.litelottery.task.CompatibleScheduler;
 import net.myunco.litelottery.task.FoliaScheduler;
+import net.myunco.litelottery.update.UpdateChecker;
+import net.myunco.litelottery.update.UpdateNotification;
+import net.myunco.litelottery.util.TabComplete;
 import net.myunco.litelottery.util.Version;
 import net.milkbowl.vault.economy.Economy;
 import org.black_ixx.playerpoints.PlayerPoints;
@@ -28,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class LiteLottery extends JavaPlugin {
+    public static LiteLottery plugin;
     private int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
     public Version mcVersion;
     private Currency currency;
@@ -38,9 +42,12 @@ public class LiteLottery extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        plugin = this;
         mcVersion = new Version(getServer().getBukkitVersion());
         getLogger().info("Minecraft version = " + mcVersion);
         init();
+        UpdateChecker.start(this);
+        getServer().getPluginManager().registerEvents(new UpdateNotification(), this);
         new Metrics(this, 13291).addCustomChart(new Metrics.SimplePie("economy_plugin", () -> currency.getName()));
     }
 
@@ -57,6 +64,16 @@ public class LiteLottery extends JavaPlugin {
         currency = new Money(rsp.getProvider());
     }
 
+    @Override
+    public void onDisable() {
+        UpdateChecker.stop();
+        scheduler.cancelTasks();
+    }
+
+    public void logMessage(String msg) {
+        getServer().getConsoleSender().sendMessage("[LiteLottery] " + msg);
+    }
+
     public void setupPoints() {
         PlayerPoints playerPoints = (PlayerPoints) getServer().getPluginManager().getPlugin("PlayerPoints");
         if (playerPoints == null || !playerPoints.isEnabled()) {
@@ -64,7 +81,7 @@ public class LiteLottery extends JavaPlugin {
             return;
         }
         currency = new Points(playerPoints.getAPI());
-        getServer().getConsoleSender().sendMessage("[LiteLottery] Found PlayerPoints: §3v" + playerPoints.getDescription().getVersion());
+        logMessage("Found PlayerPoints: §3v" + playerPoints.getDescription().getVersion());
     }
 
     private void init() {
@@ -76,9 +93,9 @@ public class LiteLottery extends JavaPlugin {
             setupEconomy();
         }
         if (currency != null) {
-            getServer().getConsoleSender().sendMessage("[LiteLottery] using currency system: §3" + currency.getName());
+            logMessage("using currency system: §3" + currency.getName());
             lottery = new Lottery(this, currency);
-            if (lottery.isOK) {
+            if (lottery.isInitialized) {
                 getScheduler().runTaskTimerAsynchronously(() -> {
                     Calendar cal = Calendar.getInstance();
                     if (lottery.checkTime(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))) {
@@ -94,7 +111,7 @@ public class LiteLottery extends JavaPlugin {
                 return;
             }
         }
-        getServer().getConsoleSender().sendMessage("[LiteLottery] §c初始化失败, 插件无法继续加载.");
+        logMessage("§c初始化失败, 插件无法继续加载.");
         ready = false;
         // getServer().getPluginManager().disablePlugin(this);
     }
@@ -124,10 +141,9 @@ public class LiteLottery extends JavaPlugin {
         }
     }
 
-    @SuppressWarnings("SpellCheckingInspection")
     private void commandLiteLottery(CommandSender sender, String[] args) {
         if (args.length != 1) {
-            sendMessage(sender, "§7/LiteLottery §3<§7version§3|§7reload§3|§7run§3|§7force§3|§7forcefalse§3>");
+            sendMessage(sender, "§7/LiteLottery §3<§7version§3|§7reload§3|§7run§3|§7force§3|§7reset§3>");
             return;
         }
         switch (args[0].toLowerCase()) {
@@ -139,25 +155,25 @@ public class LiteLottery extends JavaPlugin {
                 sendMessage(sender, Messages.configReloaded);
                 break;
             case "run":
-                if (lottery.isRunLottery) {
+                if (lottery.drawing) {
                     sendMessage(sender, Messages.alreadyDrawn);
                 } else {
                     lottery.tryRunLottery();
                 }
                 break;
             case "force":
-                if (lottery.isRunLottery && !lottery.runLotteryFinish) {
+                if (lottery.drawing && !lottery.drawCompleted) {
                     sendMessage(sender, Messages.drawingInProgress);
                 } else {
-                    lottery.isRunLottery = false;
+                    lottery.drawing = false;
                     lottery.tryRunLottery();
                 }
                 break;
-            case "forcefalse":
-                if (lottery.isRunLottery && !lottery.runLotteryFinish) {
+            case "reset":
+                if (lottery.drawing && !lottery.drawCompleted) {
                     sendMessage(sender, Messages.settingDrawState);
                 } else {
-                    lottery.forceFalse();
+                    lottery.resetDrawState();
                     sendMessage(sender, Messages.drawStateReset);
                 }
                 break;
@@ -174,7 +190,7 @@ public class LiteLottery extends JavaPlugin {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (command.getName().equals("Lottery") && args.length > 1 && sender instanceof Player) {
             if (args.length < 7 && !args[1].equalsIgnoreCase("random")) {
-                ArrayList<String> list = new ArrayList<>(lottery.numList);
+                ArrayList<String> list = new ArrayList<>(lottery.availableNumbers);
                 if (args.length == 2) {
                     list.add("random");
                 }
@@ -230,5 +246,9 @@ public class LiteLottery extends JavaPlugin {
             }
         }
         return scheduler;
+    }
+
+    public static LiteLottery getPlugin() {
+        return plugin;
     }
 }
