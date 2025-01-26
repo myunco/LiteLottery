@@ -6,6 +6,7 @@ import net.myunco.litelottery.config.Messages;
 import net.myunco.litelottery.economy.Currency;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -231,7 +232,7 @@ public class Lottery {
                 if (getRandomCount(playerName) >= Config.randomMax && !player.hasPermission("LiteLottery.bypass")) {
                     sendMessage(player, Messages.randomLimitReached);
                 } else if (player.hasPermission("LiteLottery.bypass") || checkRandomInterval(playerName)) {
-                    if (buyLottery(player, String.join(" ", randomNumber()), amount)) {
+                    if (buyLottery(player, String.join(" ", randomNumber()), amount, false)) {
                         addRandomCount(playerName);
                         setRandomTime(playerName, System.currentTimeMillis());
                         save();
@@ -243,7 +244,34 @@ public class Lottery {
             }
             String selectedNumbers = mergeArgs(args);
             if (checkNum(player, selectedNumbers)) {
-                buyLottery(player, selectedNumbers, amount);
+                buyLottery(player, selectedNumbers, amount, false);
+            }
+        }
+    }
+
+    public void consoleBetting(CommandSender sender, Player player, String[] args) {
+        if (drawing) {
+            plugin.sendMessage(sender, Messages.drawCompleted);
+        } else if (args.length > 8) {
+            plugin.sendMessage(sender, Messages.tooManyNumbers);
+        } else {
+            int amount = parseInt(args[2]);
+            if (amount < 1) {
+                plugin.sendMessage(sender, Messages.invalidBetAmount + args[2]);
+                return;
+            }
+            if (args.length == 4 && args[3].equals("random")) {
+                String playerName = player.getName();
+                if (buyLottery(player, String.join(" ", randomNumber()), amount, true)) {
+                    addRandomCount(playerName);
+                    setRandomTime(playerName, System.currentTimeMillis());
+                    save();
+                }
+                return;
+            }
+            String selectedNumbers = mergeArgs(args);
+            if (checkNum(player, selectedNumbers)) {
+                buyLottery(player, selectedNumbers, amount, true);
             }
         }
     }
@@ -275,17 +303,13 @@ public class Lottery {
         return builder.toString();
     }
 
-    private boolean buyLottery(Player player, String selectedNumbers, int amount) {
+    private boolean buyLottery(Player player, String selectedNumbers, int amount, boolean free) {
         if (Config.maxNumbers != 0 && getBetNumbers(player.getName()) == Config.maxNumbers && getBetAmount(player.getName(), selectedNumbers) == 0) {
             sendMessage(player, Messages.maxBetsReached);
         } else if (Config.maxBets != 0 && getBetsAmount(player.getName()) + amount > Config.maxBets) {
             sendMessage(player, Messages.betLimitExceeded);
         } else {
-            double money = amount * Config.moneyPerBet;
-            if (currency.has(player, money)) {
-                currency.withdrawPlayer(player, money);
-                addPrizePool(money);
-                //有些服主用命令控制一天多次开奖 所以要防止玩家钻空子把已开奖的号码再投一注变为等待开奖
+            if (free) {
                 if (!getBetState(player.getName(), selectedNumbers).equals(Messages.awaitingDraw)) {
                     setBetAmount(player.getName(), selectedNumbers, amount);
                 } else {
@@ -293,12 +317,29 @@ public class Lottery {
                 }
                 setBetState(player.getName(), selectedNumbers, Messages.awaitingDraw);
                 save();
-                sendMessage(player, Messages.getMessage(Messages.betPlaced, String.valueOf(amount), selectedNumbers) + formatDecimal(money));
+                sendMessage(player, Messages.getMessage(Messages.betPlaced, String.valueOf(amount), selectedNumbers) + "0.00");
                 playSound(player);
                 return true;
             } else {
-                sendMessage(player, Messages.insufficientFunds);
-                sendMessage(player, Messages.getMessage(Messages.totalCost, formatDecimal(money), formatDecimal(Config.moneyPerBet)));
+                double money = amount * Config.moneyPerBet;
+                if (currency.has(player, money)) {
+                    currency.withdrawPlayer(player, money);
+                    addPrizePool(money);
+                    //有些服主用命令控制一天多次开奖 所以要防止玩家钻空子把已开奖的号码再投一注变为等待开奖
+                    if (!getBetState(player.getName(), selectedNumbers).equals(Messages.awaitingDraw)) {
+                        setBetAmount(player.getName(), selectedNumbers, amount);
+                    } else {
+                        addBetAmount(player.getName(), selectedNumbers, amount);
+                    }
+                    setBetState(player.getName(), selectedNumbers, Messages.awaitingDraw);
+                    save();
+                    sendMessage(player, Messages.getMessage(Messages.betPlaced, String.valueOf(amount), selectedNumbers) + formatDecimal(money));
+                    playSound(player);
+                    return true;
+                } else {
+                    sendMessage(player, Messages.insufficientFunds);
+                    sendMessage(player, Messages.getMessage(Messages.totalCost, formatDecimal(money), formatDecimal(Config.moneyPerBet)));
+                }
             }
         }
         return false;

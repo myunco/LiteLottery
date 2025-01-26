@@ -2,6 +2,7 @@ package net.myunco.litelottery.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -9,7 +10,9 @@ public class TabComplete {
     public static HashMap<String, List<String>> tabListMap = new HashMap<>();
 
     static {
-        tabListMap.put("LiteLottery", Arrays.asList("version", "reload", "run", "force", "reset"));
+        tabListMap.put("LiteLottery", Arrays.asList("version", "reload", "run", "force", "reset", "betting", "bettingWithPlayer"));
+        tabListMap.put("LiteLottery.betting", Collections.emptyList());
+        tabListMap.put("LiteLottery.bettingwithplayer", Collections.emptyList());
         tabListMap.put("Lottery", Arrays.asList("1", "10", "100"));
     }
 

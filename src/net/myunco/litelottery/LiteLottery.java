@@ -16,6 +16,7 @@ import net.myunco.litelottery.util.TabComplete;
 import net.myunco.litelottery.util.Version;
 import net.milkbowl.vault.economy.Economy;
 import org.black_ixx.playerpoints.PlayerPoints;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -142,8 +143,8 @@ public class LiteLottery extends JavaPlugin {
     }
 
     private void commandLiteLottery(CommandSender sender, String[] args) {
-        if (args.length != 1) {
-            sendMessage(sender, "§7/LiteLottery §3<§7version§3|§7reload§3|§7run§3|§7force§3|§7reset§3>");
+        if (args.length < 1) {
+            sendMessage(sender, "§7/LiteLottery §3<§7version§3|§7reload§3|§7run§3|§7force§3|§7reset§3|§7betting§3|§7bettingWithPlayer§3>");
             return;
         }
         switch (args[0].toLowerCase()) {
@@ -177,12 +178,36 @@ public class LiteLottery extends JavaPlugin {
                     sendMessage(sender, Messages.drawStateReset);
                 }
                 break;
+            case "betting":
+                if (args.length < 4) {
+                    sendMessage(sender, "§6用法: §7/lot betting <玩家名> <投注数量> <投注号码>");
+                } else {
+                    Player player = getServer().getPlayerExact(args[1]);
+                    if (player == null) {
+                        sendMessage(sender, "§c错误: 指定的玩家不存在或未在线");
+                        return;
+                    }
+                    lottery.consoleBetting(sender, player, args);
+                }
+                break;
+            case "bettingwithplayer":
+                if (args.length < 4) {
+                    sendMessage(sender, "§6用法: §7/lot bettingWithPlayer <玩家名> <投注数量> <投注号码>");
+                } else {
+                    Player player = getServer().getPlayerExact(args[1]);
+                    if (player == null) {
+                        sendMessage(sender, "§c错误: 指定的玩家不存在或未在线");
+                        return;
+                    }
+                    lottery.placeBet(player, Arrays.copyOfRange(args, 2, args.length));
+                }
+                break;
             default:
                 sendMessage(sender, Messages.unknownCommandArgs);
         }
     }
 
-    private void sendMessage(CommandSender sender, String msg) {
+    public void sendMessage(CommandSender sender, String msg) {
         sender.sendMessage(Messages.messagePrefix + msg);
     }
 
@@ -198,7 +223,7 @@ public class LiteLottery extends JavaPlugin {
                 return TabComplete.getCompleteList(args, list);
             }
         }
-        return TabComplete.getCompleteList(args, TabComplete.getTabList(args, command.getName()));
+        return TabComplete.getCompleteList(args, TabComplete.getTabList(args, command.getName()), true);
     }
 
     private static ArrayList<String> asList(String[] args) {
