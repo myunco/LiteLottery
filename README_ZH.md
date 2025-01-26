@@ -26,7 +26,7 @@ bStats
 
 构建
 ---
-克隆此存储库后，将 [Craftbukkit-1.13.2.jar](https://getbukkit.org/get/fQ2hcjORI73x66tj7h0X8f4hteJAB64i) 添加到依赖项，使用 IDEA Artifacts 构建项目。
+克隆此存储库后，将 lib 目录添加到依赖项，使用 IDEA Artifacts 构建项目。
 
 # 鸣谢
 感谢 [JetBrains](https://www.jetbrains.com/?from=ServerMonitor) 提供的 [Free Open Source Licenses](https://jb.gg/OpenSourceSupport)
