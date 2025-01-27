@@ -16,7 +16,6 @@ import net.myunco.litelottery.util.TabComplete;
 import net.myunco.litelottery.util.Version;
 import net.milkbowl.vault.economy.Economy;
 import org.black_ixx.playerpoints.PlayerPoints;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;

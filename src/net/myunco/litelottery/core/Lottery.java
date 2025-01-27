@@ -70,6 +70,9 @@ public class Lottery {
     }
 
     public void init() {
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
         String lastFileName = getLastFileName();
         if (!dataFile.exists()) {
             try {
