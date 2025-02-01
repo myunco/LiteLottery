@@ -368,6 +368,10 @@ public class Lottery {
                 case "ENTITY_ENDER_DRAGON_DEATH":
                     sound = "ENDERDRAGON_DEATH";
             }
+        } else if (plugin.mcVersion.getMinor() < 13) {
+            if (sound.equals("ENTITY_ENDER_DRAGON_DEATH")) {
+                sound = "ENTITY_ENDERDRAGON_DEATH";
+            }
         } else if (plugin.isFolia) {
             switch (sound) {
                 case "ENTITY_EXPERIENCE_ORB_PICKUP":

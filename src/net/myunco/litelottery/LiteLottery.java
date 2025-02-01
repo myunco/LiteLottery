@@ -118,12 +118,14 @@ public class LiteLottery extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!ready) {
-            sendMessage(sender, "§c初始化失败, 插件无法使用, 请检查控制台报错.");
-        } else if (command.getName().equals("LiteLottery")) {
+        if (command.getName().equals("LiteLottery")) {
             commandLiteLottery(sender, args);
         } else {
-            commandLottery(sender, args);
+            if (!ready) {
+                sendMessage(sender, "§c初始化失败, 插件无法使用, 请检查控制台报错.");
+            } else {
+                commandLottery(sender, args);
+            }
         }
         return true;
     }
@@ -146,7 +148,12 @@ public class LiteLottery extends JavaPlugin {
             sendMessage(sender, "§7/LiteLottery §3<§7version§3|§7reload§3|§7run§3|§7force§3|§7reset§3|§7betting§3|§7bettingWithPlayer§3>");
             return;
         }
-        switch (args[0].toLowerCase()) {
+        String cmd = args[0].toLowerCase();
+        if (!ready && !cmd.equals("version") && !cmd.equals("reload")) {
+            sendMessage(sender, "§c初始化失败, 插件无法使用, 请检查控制台报错.");
+            return;
+        }
+        switch (cmd) {
             case "version":
                 sendMessage(sender, Messages.versionInfo + getDescription().getVersion());
                 break;

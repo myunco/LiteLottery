@@ -1,6 +1,6 @@
 name: LiteLottery
 main: net.myunco.litelottery.LiteLottery
-version: 1.4.1
+version: 1.4.2
 api-version: 1.13
 author: myunco
 softdepend:

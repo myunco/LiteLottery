@@ -48,7 +48,7 @@ public class CheckResult {
                         while ((line = reader.readLine()) != null) {
                             if (line.startsWith("v")) {
                                 line = line.substring(1);
-                                if (line.split(" ")[0].equals(currentVersion)) { //TODO
+                                if (line.split(" ")[0].equals(currentVersion)) {
                                     break;
                                 } else if (!majorUpdate && line.endsWith(" 重要更新")) {
                                     majorUpdate = true;
