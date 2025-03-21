@@ -26,7 +26,7 @@ How to install? / Installation / Setup
 
 Building
 ---
-After cloning this repository, add lib directory to dependencies, build the project using IDEA Artifacts.
+After cloning this repository, add [Craftbukkit-1.13.2.jar](https://getbukkit.org/get/fQ2hcjORI73x66tj7h0X8f4hteJAB64i) and lib directory to dependencies, build the project using IDEA Artifacts.
 
 # Acknowledgments
 Thanks to [JetBrains](https://www.jetbrains.com/?from=ServerMonitor) for the [Free Open Source Licenses](https://jb.gg/OpenSourceSupport)

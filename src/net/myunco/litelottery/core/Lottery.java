@@ -372,19 +372,6 @@ public class Lottery {
             if (sound.equals("ENTITY_ENDER_DRAGON_DEATH")) {
                 sound = "ENTITY_ENDERDRAGON_DEATH";
             }
-        } else if (plugin.isFolia) {
-            switch (sound) {
-                case "ENTITY_EXPERIENCE_ORB_PICKUP":
-                    playSound(player, Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
-                    return;
-                case "ENTITY_PLAYER_LEVELUP":
-                    playSound(player, Sound.ENTITY_PLAYER_LEVELUP);
-                    return;
-                case "ENTITY_ENDER_DRAGON_DEATH":
-                    playSound(player, Sound.ENTITY_ENDER_DRAGON_DEATH);
-                    return;
-            }
-            return;
         }
         playSound(player, Sound.valueOf(sound));
     }
