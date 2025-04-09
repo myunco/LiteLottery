@@ -9,6 +9,7 @@ import net.myunco.litelottery.economy.Currency;
 import net.myunco.litelottery.economy.Money;
 import net.myunco.litelottery.economy.Points;
 import net.myunco.litelottery.metrics.Metrics;
+import net.myunco.litelottery.papi.LiteLotteryExpansion;
 import net.myunco.litelottery.update.UpdateChecker;
 import net.myunco.litelottery.update.UpdateNotification;
 import net.myunco.litelottery.util.TabComplete;
@@ -40,7 +41,7 @@ public class LiteLottery extends JavaPlugin {
     private int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
     public Version mcVersion;
     private Currency currency;
-    private Lottery lottery;
+    public Lottery lottery;
     private CompatibleScheduler scheduler;
     private ConsoleCommandSender console;
     private boolean ready = false;
@@ -56,6 +57,7 @@ public class LiteLottery extends JavaPlugin {
         UpdateChecker.start(this);
         getServer().getPluginManager().registerEvents(new UpdateNotification(), this);
         new Metrics(this, 13291).addCustomChart(new Metrics.SimplePie("economy_plugin", () -> currency.getName()));
+        setupPAPI();
     }
 
     private void setupEconomy() {
@@ -69,6 +71,14 @@ public class LiteLottery extends JavaPlugin {
             return;
         }
         currency = new Money(rsp.getProvider());
+    }
+
+    public void setupPAPI() {
+        Plugin papi = getServer().getPluginManager().getPlugin("PlaceholderAPI");
+        if (papi != null && papi.isEnabled()) {
+            logMessage("Found PlaceHolderAPI: §3v" + papi.getDescription().getVersion());
+            new LiteLotteryExpansion().register();
+        }
     }
 
     public void initFoliaCompatibleAPI() {

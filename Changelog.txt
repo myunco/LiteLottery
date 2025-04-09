@@ -1,3 +1,18 @@
+2025-04-09 1.4.4版本发布
+  - 增加以下PlaceholderAPI变量：
+    %litelottery_current_pool% //当前奖池余额
+    %litelottery_current_pool_msg% //当前奖池余额消息
+    %litelottery_player_bet_stats% //当前玩家投注统计
+    %litelottery_player_bet_detail% //当前玩家投注详情
+    %litelottery_draw_time% //开奖时间
+    %litelottery_draw_state% //是否已开奖
+    %litelottery_first_prize% //一等奖最高奖金 通过 75%奖池资金 + 基础奖金 实时计算得出
+    %litelottery_second_prize% //二等奖最高奖金 通过 25%奖池资金 + 基础奖金 实时计算得出
+    %litelottery_third_prize% //三等奖每注奖金
+    %litelottery_fourth_prize% //四等奖每注奖金
+    %litelottery_fifth_prize% //五等奖每注奖金
+    %litelottery_money_per_bet% //投注每注需要的金额
+  - 其他细节优化
 2025-03-21 1.4.3版本发布
   - 现在使用FoliaCompatibleAPI实现Folia支持
   - 修复了在部分版本的服务端中开奖会报错的问题

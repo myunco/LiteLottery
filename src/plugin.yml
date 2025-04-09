@@ -1,11 +1,12 @@
 name: LiteLottery
 main: net.myunco.litelottery.LiteLottery
-version: 1.4.3
+version: 1.4.4
 api-version: 1.13
 author: myunco
 softdepend:
   - Vault
   - PlayerPoints
+  - PlaceholderAPI
 folia-supported: true
 commands:
   LiteLottery:

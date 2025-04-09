@@ -205,12 +205,24 @@ public class Lottery {
         sendMessage(player, Messages.getMessage(Messages.betStatistics, String.valueOf(bets.size()), String.valueOf(amount)));
     }
 
-    private String getLotteryTime() {
+    public ConfigurationSection getBetSection(String player) {
+        return lotteryData.getConfigurationSection("bets." + player);
+    }
+
+    public String getLotteryTime() {
         return getNum(Config.lotteryHour) + ":" + getNum(Config.lotteryMinute);
     }
 
-    private static String formatDecimal(double d) {
+    public static String formatDecimal(double d) {
         return decimalFormat.format(d);
+    }
+
+    public String getPrizePool() {
+        return formatDecimal(prizePoolBalance);
+    }
+
+    public double getPrizePoolBalance() {
+        return prizePoolBalance;
     }
 
     private void sendMessage(Player player, String message) {
@@ -300,6 +312,9 @@ public class Lottery {
         for (int i = 1; i < args.length; i++) {
             if (i != 1) {
                 builder.append(' ');
+            }
+            if (args[i].length() == 1) {
+                builder.append('0');
             }
             builder.append(args[i]);
         }
@@ -712,6 +727,7 @@ public class Lottery {
         return names.toString();
     }
 
+    @SuppressWarnings("deprecation")
     private OfflinePlayer getOfflinePlayer(String player) {
         return plugin.getServer().getOfflinePlayer(player);
     }
